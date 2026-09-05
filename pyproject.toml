@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "skp2draw"
+version = "0.1.0"
+description = "SketchUp bútormodellekből műszaki rajzokat generáló eszköz"
+requires-python = ">=3.11"
+dependencies = [
+    "openskp",
+    "numpy",
+]
+
+[tool.setuptools]
+packages = [
+    "skp2draw",
+    "skp2draw.parser",
+    "skp2draw.geometry",
+    "skp2draw.dimensioning",
+    "skp2draw.drawing",
+]
