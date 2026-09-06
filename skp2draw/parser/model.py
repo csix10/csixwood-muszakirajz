@@ -68,20 +68,23 @@ def _build_mesh(primitives) -> Mesh | None:
 
 
 def build_tree(scene) -> Node:
-    """
-    Bejárja az InstancedScene.scene_hierarchy fát, és felépíti a saját
-    Node-fánkat, minden csomóponthoz hozzárendelve a (deduplikált) geometriát.
-    """
     mesh_by_id = {mr.id: _build_mesh(mr.primitives) for mr in scene.mesh_resources}
 
-    def walk(inode) -> Node:
+    def walk(inode, parent_world: np.ndarray) -> Node:
+        local = _matrix_16_to_4x4(inode.matrix)
+        world = parent_world @ local          # <-- ez az uj resz: osszefuzes
         mesh = mesh_by_id.get(inode.mesh_resource_id) if inode.mesh_resource_id else None
-        return Node(
+        node = Node(
             name=inode.name or inode.definition_name or "(névtelen)",
             definition_name=inode.definition_name,
-            world_matrix=_matrix_16_to_4x4(inode.matrix),
+            local_matrix=local,
+            world_matrix=world,
             mesh=mesh,
-            children=[walk(c) for c in inode.children],
+            children=[],
         )
+        node.children = [walk(c, world) for c in inode.children]
+        return node
+
+    return walk(scene.scene_hierarchy, np.eye(4))
 
     return walk(scene.scene_hierarchy)
