@@ -1,9 +1,15 @@
 """
 Saját, egyszerűsített fa-struktúra az OpenSKP instanced-scene kimenete fölött.
 
-Minden InstancedNode.matrix mezője már a VILÁG-koordinátás transzformáció,
-méterben, oszlop-major 4x4-ként (az utolsó sor mindig (0,0,0,1), ahogy egy
-szabvány affin transzformációnál elvárható – ezt leellenőriztük élesben).
+FONTOS: az InstancedNode.matrix mezője az OpenSKP saját dokumentációja
+szerint a csomópont transzformációja A SAJÁT SZÜLŐJÉHEZ KÉPEST van
+megadva (nem a teljes világhoz képest!) - "The root node's matrix is the
+identity." Ezért a fa bejárásakor VÉGIG KELL SZOROZNUNK a már kiszámolt
+szülő-világmátrixot minden gyerek saját (szülőhöz képesti) mátrixával,
+különben a mélyebben beágyazott elemek (pl. egy szekrényen belüli panel)
+hibásan az origó közelébe kerülnének számításilag, a valós világpozíciójuk
+helyett.
+
 A geometriát (mesh_resources) egyszer alakítjuk Mesh-sze definíciónként,
 mert az OpenSKP is deduplikáltan tárolja (egy közös alkatrészt nem
 másol le minden előfordulásnál újra).
@@ -26,7 +32,8 @@ class Mesh:
 class Node:
     name: str
     definition_name: str
-    world_matrix: np.ndarray              # 4x4, HELYI-mm -> VILÁG-mm
+    local_matrix: np.ndarray              # 4x4, a SAJÁT SZÜLŐHÖZ képest, mm
+    world_matrix: np.ndarray              # 4x4, HELYI-mm -> VILÁG-mm (összefűzve!)
     mesh: Mesh | None
     children: list["Node"] = field(default_factory=list)
 
@@ -37,7 +44,8 @@ class Node:
 
 def _matrix_16_to_4x4(values) -> np.ndarray:
     """
-    Az InstancedNode.matrix 16 elemű, OSZLOP-major elrendezésű:
+    Az InstancedNode.matrix 16 elemű, OSZLOP-major elrendezésű, A SAJÁT
+    SZÜLŐHÖZ KÉPEST értelmezve:
     [oszlop0(3)+0, oszlop1(3)+0, oszlop2(3)+0, eltolás(3)+1].
     Az eltolás méterben van -> mm-re konvertáljuk; a forgatás/skálázás
     (a bal-felső 3x3 blokk) mértékegység-független, azt nem szorozzuk.
@@ -68,11 +76,16 @@ def _build_mesh(primitives) -> Mesh | None:
 
 
 def build_tree(scene) -> Node:
+    """
+    Bejárja az InstancedScene.scene_hierarchy fát, és felépíti a saját
+    Node-fánkat, minden csomóponthoz hozzárendelve a (deduplikált) geometriát
+    ÉS a helyesen ÖSSZEFŰZÖTT (kumulatív) VILÁG-transzformációt.
+    """
     mesh_by_id = {mr.id: _build_mesh(mr.primitives) for mr in scene.mesh_resources}
 
     def walk(inode, parent_world: np.ndarray) -> Node:
         local = _matrix_16_to_4x4(inode.matrix)
-        world = parent_world @ local          # <-- ez az uj resz: osszefuzes
+        world = parent_world @ local
         mesh = mesh_by_id.get(inode.mesh_resource_id) if inode.mesh_resource_id else None
         node = Node(
             name=inode.name or inode.definition_name or "(névtelen)",
@@ -86,5 +99,3 @@ def build_tree(scene) -> Node:
         return node
 
     return walk(scene.scene_hierarchy, np.eye(4))
-
-    return walk(scene.scene_hierarchy)
