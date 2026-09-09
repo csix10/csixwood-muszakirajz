@@ -1,22 +1,32 @@
 """
 Komponens-típus osztályozás: panel (sík bútorlap) vs lakatszerelvény (hardware),
-és az egyedi méretű panel-változatok összegyűjtése a rajzgeneráláshoz.
+és az egyedi méretű panel-változatok / bútorelem-modulok összegyűjtése a
+rajzgeneráláshoz.
 """
 from __future__ import annotations
 from skp2draw.parser.model import Node
-from skp2draw.geometry.bbox import scaled_local_sizes
 from skp2draw.geometry.bbox import scaled_local_sizes, subtree_bbox_in_frame
 
 PANEL_MIN_FACE_SIZE_MM = 100.0
+PANEL_MAX_THICKNESS_MM = 50.0
 
 
 def classify_kind(node: Node) -> str:
-    """Visszaadja: 'panel', 'hardware', vagy 'no_geometry'."""
+    """
+    Visszaadja: 'panel', 'hardware', vagy 'no_geometry'.
+
+    A "két nagy méret" szabály önmagában tévesen panelnek nézne nagyobb,
+    de nem lapszerű dolgokat is (pl. egy egész szoba-csoportot, egy hűtőt,
+    egy komplex polcrendszert) - ezért egy felső vastagság-korlátot is
+    előírunk: egy valódi bútorlap tipikusan legfeljebb ~40mm vastag,
+    biztonsági ráadással 50mm-ig engedjük.
+    """
     sizes = scaled_local_sizes(node)
     if sizes is None:
         return "no_geometry"
     sorted_sizes = sorted(sizes, reverse=True)
-    if sorted_sizes[1] >= PANEL_MIN_FACE_SIZE_MM:
+    thickness = sorted_sizes[2]
+    if sorted_sizes[1] >= PANEL_MIN_FACE_SIZE_MM and thickness <= PANEL_MAX_THICKNESS_MM:
         return "panel"
     return "hardware"
 
@@ -53,6 +63,7 @@ def collect_unique_panels(root: Node):
 
     walk(root)
     return list(seen.values())
+
 
 def _has_panel_descendant(node: Node) -> bool:
     """Van-e a node részfájában legalább egy panelként osztályozott elem."""

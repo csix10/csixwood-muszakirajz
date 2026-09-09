@@ -85,3 +85,28 @@ def subtree_bbox_in_frame(node: Node, frame: np.ndarray):
 def subtree_world_bbox(node: Node):
     """A node részfájának befoglaló doboza a VILÁG-keretben (lásd fent)."""
     return subtree_bbox_in_frame(node, np.eye(4))
+
+def subtree_points_in_frame(node: Node, frame: np.ndarray):
+    """
+    A node részfájának ÖSSZES geometria-pontja, egy adott keretben (frame)
+    kifejezve - ez kell a nem-téglalap alakú hardware-elemek (lábak,
+    pántok stb.) körvonalának (konvex burok) kiszámításához.
+    """
+    inv_frame = np.linalg.inv(frame)
+    points = []
+
+    def walk(n: Node):
+        if n.has_geometry:
+            pts_local = n.mesh.vertices_mm
+            ones = np.ones((pts_local.shape[0], 1))
+            pts_h = np.hstack([pts_local, ones])
+            pts_world = (n.world_matrix @ pts_h.T).T
+            pts_frame = (inv_frame @ pts_world.T).T[:, :3]
+            points.append(pts_frame)
+        for c in n.children:
+            walk(c)
+
+    walk(node)
+    if not points:
+        return None
+    return np.vstack(points)

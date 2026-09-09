@@ -8,9 +8,11 @@ from __future__ import annotations
 from pathlib import Path
 import ezdxf
 
-from skp2draw.dimensioning.rules import rectangle_dimensions
 from skp2draw.geometry.bbox import subtree_world_bbox
 from skp2draw.hierarchy import _has_panel_descendant, _count_geometry_descendants, MIN_PARTS_FOR_ASSEMBLY
+from skp2draw.geometry.projection import assembly_construction_views
+from skp2draw.geometry.hidden_line import compute_visible_segments
+from skp2draw.dimensioning.rules import rectangle_dimensions, chain_dimensions
 
 GAP_MM = 60.0
 TITLE_HEIGHT_MM = 12.0
@@ -53,6 +55,12 @@ def _add_dimensions(msp, x0, y0, width, height):
             dimstyle=DIMSTYLE_NAME,
         )
         dxf_dim.render()
+
+def _add_hardware_polygons(msp, hardware_polys, x_offset=0.0, y_offset=0.0):
+    for hw in hardware_polys:
+        points = [(u + x_offset, v + y_offset) for u, v in hw["points"]]
+        linetype = "Continuous" if hw["visible"] else "DASHED"
+        msp.add_lwpolyline(points, close=True, dxfattribs={"linetype": linetype})
 
 
 def export_views(views, label: str, path, count: int = 1):
@@ -147,6 +155,100 @@ def export_layout(root, path, label="Konyha elrendezes (felulnezet)"):
     msp.add_text(
         label, dxfattribs={"height": 200.0},
     ).set_placement((all_x0, all_z1 + 400.0))
+
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    doc.saveas(str(path))
+
+def _add_segments(msp, segments, x_offset=0.0, y_offset=0.0):
+    for seg in segments:
+        linetype = "Continuous" if seg.visible else "DASHED"
+        msp.add_line(
+            (seg.u0 + x_offset, seg.v0 + y_offset),
+            (seg.u1 + x_offset, seg.v1 + y_offset),
+            dxfattribs={"linetype": linetype},
+        )
+
+CHAIN_OFFSET_MM = 15.0      # a részlet-lánc távolsága a rajztól
+OVERALL_OFFSET_MM = 45.0    # az össz-méret távolsága a rajztól (a lánc UTÁN)
+MAJOR_PANEL_MIN_MM = 100.0  # ennél kisebb (bármelyik irányban) elemek NEM
+                             # kapnak saját méretvonalat a láncban (pl. kis
+                             # sarok-csatlakozók) - a RAJZON továbbra is
+                             # megjelennek, csak nem méretezzük őket külön
+
+
+def _render_dimension_lines(msp, dims):
+    for dim in dims:
+        angle = 0 if dim.kind == "horizontal" else 90
+        dxf_dim = msp.add_linear_dim(
+            base=dim.base, p1=dim.p1, p2=dim.p2, angle=angle,
+            dimstyle=DIMSTYLE_NAME,
+        )
+        dxf_dim.render()
+
+
+def export_construction_views(node, label: str, path, count: int = 1):
+    """
+    Egy összeállítás (bútorelem) három nézete (elölnézet, felülnézet,
+    oldalnézet), MINDEN panel-alkotóelem körvonalával: a LÁTHATÓ élek
+    folytonos, a KÖZELEBBI alkatrészek által ELTAKART élek szaggatott
+    vonallal. A "fő" (min. 100mm-es) alkatrész-határokhoz méretvonal
+    tartozik: egy közeli "részlet-lánc" az egyes szakaszokra, plusz egy
+    távolabbi méretvonal az össz-méretre.
+    """
+    views_data = assembly_construction_views(node)
+    if views_data is None:
+        raise ValueError(f"Nincs geometria: {label}")
+
+    doc = ezdxf.new(setup=True)
+    _ensure_dimstyle(doc)
+    msp = doc.modelspace()
+
+    x_cursor = 0.0
+    max_top = 0.0
+    for view_label in ("elölnézet", "felülnézet", "oldalnézet"):
+        v = views_data[view_label]["view"]
+        rects = views_data[view_label]["rects"]
+        segments = compute_visible_segments(rects)
+        _add_segments(msp, segments, x_offset=x_cursor, y_offset=0.0)
+        _add_hardware_polygons(msp, views_data[view_label]["hardware"], x_offset=x_cursor, y_offset=0.0)
+
+        major_rects = [
+            r for r in rects
+            if (r.u1 - r.u0) >= MAJOR_PANEL_MIN_MM and (r.v1 - r.v0) >= MAJOR_PANEL_MIN_MM
+        ]
+        u_coords = [r.u0 for r in major_rects] + [r.u1 for r in major_rects]
+        v_coords = [r.v0 for r in major_rects] + [r.v1 for r in major_rects]
+        u_coords += [0.0, v.width]
+        v_coords += [0.0, v.height]
+
+        horiz_chain = chain_dimensions(
+            [c + x_cursor for c in u_coords], "horizontal",
+            fixed=0.0, offset=CHAIN_OFFSET_MM,
+        )
+        vert_chain = chain_dimensions(
+            v_coords, "vertical",
+            fixed=x_cursor, offset=CHAIN_OFFSET_MM,
+        )
+        _render_dimension_lines(msp, horiz_chain)
+        _render_dimension_lines(msp, vert_chain)
+
+        overall = rectangle_dimensions(x_cursor, 0.0, v.width, v.height, offset=OVERALL_OFFSET_MM)
+        _render_dimension_lines(msp, overall)
+
+        msp.add_text(
+            v.label,
+            dxfattribs={"height": LABEL_HEIGHT_MM},
+        ).set_placement((x_cursor, -OVERALL_OFFSET_MM - LABEL_HEIGHT_MM * 3))
+
+        max_top = max(max_top, v.height)
+        x_cursor += v.width + GAP_MM + OVERALL_OFFSET_MM
+
+    title = label if count == 1 else f"{label}  ({count} db)"
+    msp.add_text(
+        title,
+        dxfattribs={"height": TITLE_HEIGHT_MM},
+    ).set_placement((0.0, max_top + OVERALL_OFFSET_MM + TITLE_HEIGHT_MM * 3))
 
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
