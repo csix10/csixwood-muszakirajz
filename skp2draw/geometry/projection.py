@@ -11,6 +11,7 @@ import numpy as np
 from skp2draw.parser.model import Node
 from skp2draw.geometry.bbox import scaled_local_sizes, subtree_bbox_in_frame, subtree_points_in_frame
 from skp2draw.geometry.hidden_line import Rect, convex_hull_2d, point_in_rect
+from skp2draw.hierarchy import classify_kind
 
 
 @dataclass
@@ -124,36 +125,18 @@ def assembly_views(node: Node, frame=None):
         View(label="oldalnézet", width=sizes[depth_axis], height=sizes[height_axis]),
     ]
 
-
-def _collect_panel_descendants(node: Node) -> list[Node]:
-    """Az összes PANEL-ként osztályozott leszármazott, bármilyen mélyen beágyazva."""
-    from skp2draw.hierarchy import classify_kind
+def _collect_by_kind(node: Node, kind: str) -> list[Node]:
+    """Az összes adott KIND-ként ('panel' vagy 'hardware') osztályozott leszármazott, bármilyen mélyen beágyazva."""
     result = []
 
     def walk(n: Node):
-        if n.has_geometry and classify_kind(n) == "panel":
+        if n.has_geometry and classify_kind(n) == kind:
             result.append(n)
         for c in n.children:
             walk(c)
 
     walk(node)
     return result
-
-
-def _collect_hardware_descendants(node: Node) -> list[Node]:
-    """Az összes HARDWARE-ként osztályozott leszármazott, bármilyen mélyen beágyazva."""
-    from skp2draw.hierarchy import classify_kind
-    result = []
-
-    def walk(n: Node):
-        if n.has_geometry and classify_kind(n) == "hardware":
-            result.append(n)
-        for c in n.children:
-            walk(c)
-
-    walk(node)
-    return result
-
 
 def assembly_construction_views(node: Node, frame=None):
     """
@@ -179,11 +162,11 @@ def assembly_construction_views(node: Node, frame=None):
         "oldalnézet": (depth_axis, height_axis, width_axis, 1.0),
     }
 
-    panels = _collect_panel_descendants(node)
+    panels = _collect_by_kind(node, "panel")
     panel_bboxes = [(p, subtree_bbox_in_frame(p, frame)) for p in panels]
     panel_bboxes = [(p, b) for p, b in panel_bboxes if b is not None]
 
-    hardware = _collect_hardware_descendants(node)
+    hardware = _collect_by_kind(node, "hardware")
     hardware_points = [(h, subtree_points_in_frame(h, frame)) for h in hardware]
     hardware_points = [(h, p) for h, p in hardware_points if p is not None]
 

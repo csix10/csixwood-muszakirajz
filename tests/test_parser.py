@@ -10,6 +10,7 @@ import pytest
 
 from skp2draw.parser.reader import load_scene
 from skp2draw.parser.model import build_tree, Node
+from skp2draw.geometry.bbox import world_bbox
 
 FIXTURE_PATH = Path(__file__).parent / "fixtures" / "mikros.skp"
 
@@ -21,17 +22,12 @@ def tree() -> Node:
 
 
 def _bbox_mm(node: Node) -> tuple[float, float, float] | None:
-    if node.mesh is None or len(node.mesh.vertices_mm) == 0:
+    bbox = world_bbox(node)
+    if bbox is None:
         return None
-    pts_local = node.mesh.vertices_mm
-    ones = np.ones((pts_local.shape[0], 1))
-    pts_h = np.hstack([pts_local, ones])
-    pts_world = (node.world_matrix @ pts_h.T).T[:, :3]
-    mins = pts_world.min(axis=0)
-    maxs = pts_world.max(axis=0)
+    mins, maxs = bbox
     size = maxs - mins
     return tuple(round(v, 1) for v in size)
-
 
 def _print_tree(node: Node, depth: int = 0) -> None:
     indent = "  " * depth

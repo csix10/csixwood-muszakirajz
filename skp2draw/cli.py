@@ -12,7 +12,7 @@ from pathlib import Path
 from skp2draw.parser.reader import load_scene
 from skp2draw.parser.model import build_tree
 from skp2draw.hierarchy import collect_unique_panels, collect_unique_assemblies
-from skp2draw.geometry.projection import panel_views, assembly_views
+from skp2draw.geometry.projection import panel_views, assembly_construction_views
 from skp2draw.drawing.dxf_export import export_views, export_construction_views, export_layout
 
 
@@ -70,11 +70,13 @@ def generate_all_assemblies(skp_path, output_dir) -> list[Path]:
     used_filenames: set[str] = set()
 
     for node, count in assemblies:
-        views = assembly_views(node)
+        views_data = assembly_construction_views(node)
+        front = views_data["elölnézet"]["view"]
+        top = views_data["felülnézet"]["view"]
         base = _safe_filename(node.definition_name)
-        filename = _unique_filename(base, views[0].width, views[0].height, views[1].height, used_filenames)
+        filename = _unique_filename(base, front.width, front.height, top.height, used_filenames)
         path = output_dir / filename
-        export_construction_views(node, node.definition_name, path, count=count)
+        export_construction_views(node, node.definition_name, path, count=count, views_data=views_data)
         written.append(path)
 
     return written

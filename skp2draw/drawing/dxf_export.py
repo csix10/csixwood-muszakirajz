@@ -38,6 +38,14 @@ def _ensure_dimstyle(doc):
     style.dxf.dimexo = 3.0    # segédvonal távolsága a mért ponttól
     style.dxf.dimgap = 2.0    # rés a méretvonal és a szöveg között
 
+def _render_dimension_lines(msp, dims):
+    for dim in dims:
+        angle = 0 if dim.kind == "horizontal" else 90
+        dxf_dim = msp.add_linear_dim(
+            base=dim.base, p1=dim.p1, p2=dim.p2, angle=angle,
+            dimstyle=DIMSTYLE_NAME,
+        )
+        dxf_dim.render()
 
 def _add_rectangle(msp, x0, y0, width, height):
     points = [
@@ -48,13 +56,7 @@ def _add_rectangle(msp, x0, y0, width, height):
 
 
 def _add_dimensions(msp, x0, y0, width, height):
-    for dim in rectangle_dimensions(x0, y0, width, height, offset=DIM_OFFSET_MM):
-        angle = 0 if dim.kind == "horizontal" else 90
-        dxf_dim = msp.add_linear_dim(
-            base=dim.base, p1=dim.p1, p2=dim.p2, angle=angle,
-            dimstyle=DIMSTYLE_NAME,
-        )
-        dxf_dim.render()
+    _render_dimension_lines(msp, rectangle_dimensions(x0, y0, width, height, offset=DIM_OFFSET_MM))
 
 def _add_hardware_polygons(msp, hardware_polys, x_offset=0.0, y_offset=0.0):
     for hw in hardware_polys:
@@ -144,13 +146,10 @@ def export_layout(root, path, label="Konyha elrendezes (felulnezet)"):
     all_x1 = max(b[1] + b[3] for b in module_boxes)
     all_z1 = max(b[2] + b[4] for b in module_boxes)
 
-    for dim in rectangle_dimensions(all_x0, all_z0, all_x1 - all_x0, all_z1 - all_z0, offset=150.0):
-        angle = 0 if dim.kind == "horizontal" else 90
-        dxf_dim = msp.add_linear_dim(
-            base=dim.base, p1=dim.p1, p2=dim.p2, angle=angle,
-            dimstyle=DIMSTYLE_NAME,
-        )
-        dxf_dim.render()
+    _render_dimension_lines(
+        msp,
+        rectangle_dimensions(all_x0, all_z0, all_x1 - all_x0, all_z1 - all_z0, offset=150.0),
+    )
 
     msp.add_text(
         label, dxfattribs={"height": 200.0},
@@ -176,18 +175,7 @@ MAJOR_PANEL_MIN_MM = 100.0  # ennél kisebb (bármelyik irányban) elemek NEM
                              # sarok-csatlakozók) - a RAJZON továbbra is
                              # megjelennek, csak nem méretezzük őket külön
 
-
-def _render_dimension_lines(msp, dims):
-    for dim in dims:
-        angle = 0 if dim.kind == "horizontal" else 90
-        dxf_dim = msp.add_linear_dim(
-            base=dim.base, p1=dim.p1, p2=dim.p2, angle=angle,
-            dimstyle=DIMSTYLE_NAME,
-        )
-        dxf_dim.render()
-
-
-def export_construction_views(node, label: str, path, count: int = 1):
+def export_construction_views(node, label: str, path, count: int = 1, views_data=None):
     """
     Egy összeállítás (bútorelem) három nézete (elölnézet, felülnézet,
     oldalnézet), MINDEN panel-alkotóelem körvonalával: a LÁTHATÓ élek
@@ -196,7 +184,10 @@ def export_construction_views(node, label: str, path, count: int = 1):
     tartozik: egy közeli "részlet-lánc" az egyes szakaszokra, plusz egy
     távolabbi méretvonal az össz-méretre.
     """
-    views_data = assembly_construction_views(node)
+
+
+    if views_data is None:
+        views_data = assembly_construction_views(node)
     if views_data is None:
         raise ValueError(f"Nincs geometria: {label}")
 
