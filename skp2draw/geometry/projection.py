@@ -203,3 +203,126 @@ def assembly_construction_views(node: Node, frame=None):
         result[label] = {"view": view, "rects": rects, "hardware": hardware_polys}
 
     return result
+
+
+# ---- Teljes bútorzat (több modul EGYÜTT) nézetei ----
+#
+# Az assembly_construction_views EGYETLEN modult néz, a SAJÁT (world_matrix
+# szerinti) keretében, és a nézet (0,0) origóját mindig az adott modul
+# saját bbox-ának bal-alsó sarkára tolja. Ha ezt egyenként hívnánk meg
+# minden modulra, minden modul a saját (0,0)-ban landolna - elveszne az
+# egymáshoz képesti VALÓDI pozíciójuk, pont az, amit a "teljes bútorzat"
+# rajznak be kellene mutatnia. Ezért itt EGYSÉGES (globális, a teljes
+# gyökérre meghatározott) tengelyeket használunk, és a panelek/hardver
+# VILÁG-koordinátáit csak egyetlen, KÖZÖS (u0, v0) eltolással toljuk a
+# rajzlap origójához - a modulok egymáshoz képesti helyzete megmarad.
+
+
+def layout_axes(root: Node, frame=None):
+    """
+    A TELJES bútorzat SZÉLESSÉG / MAGASSÁG / MÉLYSÉG tengelye - ugyanaz a
+    logika, mint egyetlen összeállításnál (_assembly_axes), csak a
+    gyökérre alkalmazva, hogy a teljes elrendezés-rajz mindhárom nézete
+    (felül-, oldal-, elölnézet) egységes tengelyeket használjon minden
+    modulnál, függetlenül attól, hogy melyik modult nézzük éppen.
+    """
+    frame = np.eye(4) if frame is None else frame
+    return _assembly_axes(root, frame)
+
+
+def layout_view_specs(axes):
+    """
+    A TELJES bútorzat mindhárom nézetéhez tartozó (u_axis, v_axis,
+    dist_axis, dist_sign) tengely-hozzárendelés a layout_axes(root)
+    eredménye (width_axis, height_axis, depth_axis, depth_sign) alapján -
+    ugyanaz a leképezés, mint assembly_construction_views-nál, csak
+    nyilvánosan is elérhető, hogy a rajzoló réteg (dxf_export) a
+    modulhatárok elhelyezéséhez fel tudja használni ugyanazokat a
+    tengelyeket, amikkel a panel-geometria készült.
+    """
+    width_axis, height_axis, depth_axis, depth_sign = axes
+    return {
+        "elölnézet": (width_axis, height_axis, depth_axis, depth_sign),
+        "felülnézet": (width_axis, depth_axis, height_axis, -1.0),
+        "oldalnézet": (depth_axis, height_axis, width_axis, 1.0),
+    }
+
+
+def full_layout_views(modules, axes, frame=None):
+    """
+    A teljes bútorzat (TÖBB modul EGYÜTT) mindhárom nézete: minden modul
+    ÖSSZES panel- és hardver-leszármazottjának Rect/hull adata, a modulok
+    egymáshoz képesti VALÓDI világpozíciójában (nem az egyes modulok
+    saját (0,0) origójára tolva) - így az összes panel EGYÜTT megy át a
+    rejtett-vonal (occlusion) számításon: egy modul eltakarhatja a
+    mögötte/alatta lévő másik modul éleit is, nem csak a saját belső
+    paneleket.
+
+    `modules`: (Node, (mins, maxs)) párok listája, lásd:
+    dxf_export._collect_layout_modules. `axes`: (width_axis, height_axis,
+    depth_axis, depth_sign), pl. layout_axes(root) eredménye.
+
+    Visszaad: {"elölnézet": {"view": View, "rects": [...],
+    "hardware": [...], "origin": (u0, v0)}, ...} - ugyanabban a
+    formában, mint assembly_construction_views, plusz az "origin": ez az
+    a (u0, v0) világ-eltolás, amivel a rects/hardware már el van tolva
+    a nézet (0,0) origójához - a hívónak (pl. a modulhatár-
+    méretvonalakhoz) ugyanezt kell levonnia a modulok saját bbox-ából.
+    Ha egyetlen modulban sincs panel, None-t ad vissza.
+    """
+    frame = np.eye(4) if frame is None else frame
+    view_specs = layout_view_specs(axes)
+
+    panel_data = []
+    hardware_data = []
+    for node, _ in modules:
+        for panel in _collect_by_kind(node, "panel"):
+            bbox = subtree_bbox_in_frame(panel, frame)
+            if bbox is not None:
+                panel_data.append((panel, bbox[0], bbox[1]))
+        for hw in _collect_by_kind(node, "hardware"):
+            pts = subtree_points_in_frame(hw, frame)
+            if pts is not None:
+                hardware_data.append((hw, pts))
+
+    if not panel_data:
+        return None
+
+    all_mins = np.array([mins for _, (mins, maxs) in modules]).min(axis=0)
+    all_maxs = np.array([maxs for _, (mins, maxs) in modules]).max(axis=0)
+
+    result = {}
+    for label, (u_axis, v_axis, dist_axis, dist_sign) in view_specs.items():
+        u0, v0 = all_mins[u_axis], all_mins[v_axis]
+
+        rects = []
+        for panel, pmins, pmaxs in panel_data:
+            near = min(dist_sign * pmins[dist_axis], dist_sign * pmaxs[dist_axis])
+            rects.append(Rect(
+                u0=pmins[u_axis] - u0, v0=pmins[v_axis] - v0,
+                u1=pmaxs[u_axis] - u0, v1=pmaxs[v_axis] - v0,
+                distance=near, label=panel.name or panel.definition_name,
+            ))
+
+        hardware_polys = []
+        for hw, pts in hardware_data:
+            proj = [(float(p[u_axis]) - u0, float(p[v_axis]) - v0) for p in pts]
+            hull = convex_hull_2d(proj)
+            if len(hull) < 3:
+                continue
+            distance = float((pts[:, dist_axis] * dist_sign).min())
+            cu = sum(p[0] for p in hull) / len(hull)
+            cv = sum(p[1] for p in hull) / len(hull)
+            closer = [r for r in rects if r.distance < distance]
+            visible = not any(point_in_rect(cu, cv, r) for r in closer)
+            hardware_polys.append({
+                "points": hull, "visible": visible,
+                "label": hw.name or hw.definition_name,
+            })
+
+        width = all_maxs[u_axis] - all_mins[u_axis]
+        height = all_maxs[v_axis] - all_mins[v_axis]
+        view = View(label=label, width=width, height=height)
+        result[label] = {"view": view, "rects": rects, "hardware": hardware_polys, "origin": (u0, v0)}
+
+    return result

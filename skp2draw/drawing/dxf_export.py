@@ -10,7 +10,7 @@ import ezdxf
 
 from skp2draw.geometry.bbox import subtree_world_bbox
 from skp2draw.hierarchy import _has_panel_descendant, _count_geometry_descendants, MIN_PARTS_FOR_ASSEMBLY
-from skp2draw.geometry.projection import assembly_construction_views
+from skp2draw.geometry.projection import assembly_construction_views, layout_axes, layout_view_specs, full_layout_views
 from skp2draw.geometry.hidden_line import compute_visible_segments
 from skp2draw.dimensioning.rules import rectangle_dimensions, chain_dimensions
 
@@ -99,65 +99,221 @@ def export_views(views, label: str, path, count: int = 1):
 export_panel_views = export_views
 
 
+# ---- Teljes elrendezés / áttekintő rajz ----
+#
+# Cél: nem egy-egy bútorelem szerkezete, hanem a TELJES bútorzat, hogy
+# lássuk, az egyes modulok hol állnak egymáshoz képest - fő méretekkel
+# (modulhatárok + össz-méret), nem a részletes belső szerkezettel.
+
+LAYOUT_CHAIN_OFFSET_MM = 40.0
+LAYOUT_OVERALL_OFFSET_MM = 120.0
+LAYOUT_VIEW_GAP_MM = 800.0
+MODULE_LABEL_HEIGHT_MM = 30.0
+
+
+def _collect_layout_modules(root):
+    """
+    A root közvetlen gyerekei közül a VALÓDI ÖSSZEÁLLÍTÁSOKAT gyűjti össze
+    (ugyanaz a szűrés, mint collect_unique_assemblies-nál: nincs saját
+    geometriája, van legalább egy panel-leszármazottja, és legalább
+    MIN_PARTS_FOR_ASSEMBLY db geometriával rendelkező leszármazottja),
+    a VILÁG-koordinátás befoglaló dobozukkal (mins, maxs) együtt - ez
+    adja meg minden modul TÉNYLEGES, egymáshoz képesti helyzetét.
+    """
+    modules = []
+    for node in root.children:
+        if node.has_geometry:
+            continue
+        if not _has_panel_descendant(node):
+            continue
+        if _count_geometry_descendants(node) < MIN_PARTS_FOR_ASSEMBLY:
+            continue
+        bbox = subtree_world_bbox(node)
+        if bbox is None:
+            continue
+        modules.append((node, bbox))
+    return modules
+
+
+def _render_layout_view(msp, modules, u_axis, v_axis, v_offset=0.0):
+    """
+    Egy nézet (pl. felülnézet vagy elölnézet) kirajzolása: minden modul
+    saját téglalapja a VALÓS, egymáshoz képesti világpozíciójában és
+    névvel, PLUSZ a modulhatárok (hol kezdődik/végződik egy-egy elem)
+    lánc-méretvonala az u tengely mentén, és az egész elrendezés
+    össz-mérete. `v_offset`-tel lehet lejjebb/feljebb tolni a teljes
+    nézetet a lapon (pl. hogy egy második nézet alá kerüljön, ne
+    fedjék egymást).
+
+    Visszaadja: (u0, alsó_v_határ, u1, felső_v_határ) - a nézet által
+    ténylegesen elfoglalt terület, a méretvonalakkal és a helynek
+    szánt felirat-sávval együtt.
+    """
+    boxes = []
+    for node, (mins, maxs) in modules:
+        u0 = mins[u_axis]
+        v0 = mins[v_axis] + v_offset
+        width = maxs[u_axis] - mins[u_axis]
+        height = maxs[v_axis] - mins[v_axis]
+        boxes.append((node, u0, v0, width, height))
+
+    for node, u0, v0, width, height in boxes:
+        points = [
+            (u0, v0), (u0 + width, v0),
+            (u0 + width, v0 + height), (u0, v0 + height),
+        ]
+        msp.add_lwpolyline(points, close=True)
+        msp.add_text(
+            node.name, dxfattribs={"height": MODULE_LABEL_HEIGHT_MM},
+        ).set_placement((u0 + 15, v0 + 15))
+
+    all_u0 = min(b[1] for b in boxes)
+    all_v0 = min(b[2] for b in boxes)
+    all_u1 = max(b[1] + b[3] for b in boxes)
+    all_v1 = max(b[2] + b[4] for b in boxes)
+
+    u_edges = sorted({b[1] for b in boxes} | {b[1] + b[3] for b in boxes})
+    chain = chain_dimensions(u_edges, "horizontal", fixed=all_v0, offset=LAYOUT_CHAIN_OFFSET_MM)
+    _render_dimension_lines(msp, chain)
+
+    overall = rectangle_dimensions(
+        all_u0, all_v0, all_u1 - all_u0, all_v1 - all_v0, offset=LAYOUT_OVERALL_OFFSET_MM,
+    )
+    _render_dimension_lines(msp, overall)
+
+    bottom = all_v0 - LAYOUT_OVERALL_OFFSET_MM - MODULE_LABEL_HEIGHT_MM * 4
+    return all_u0, bottom, all_u1, all_v1
+
+
 def export_layout(root, path, label="Konyha elrendezes (felulnezet)"):
     """
-    A teljes konyha alaprajza (felülnézet): minden közvetlen gyerek-modul
-    közül a VALÓDI ÖSSZEÁLLÍTÁSOK (nem egyetlen panel, nem csak hardware-
-    konténer) saját lábnyomat-téglalapja a VILÁG X-Z síkjában, a tényleges
-    világpozícióban - így látszik, melyik modul hol áll a másikhoz képest.
-    Plusz az egész elrendezés befoglaló méretei (teljes szélesség/mélység).
+    A teljes konyha alaprajza (felülnézet, VILÁG X-Z sík): minden közvetlen
+    gyerek-modul (VALÓDI ÖSSZEÁLLÍTÁS) saját lábnyomat-téglalapja a
+    tényleges világpozícióban - így látszik, melyik modul hol áll a
+    másikhoz képest -, névvel, a modulhatárok lánc-méretvonalával, és
+    az egész elrendezés össz-méretével.
     """
     doc = ezdxf.new(setup=True)
     _ensure_dimstyle(doc)
     msp = doc.modelspace()
 
-    module_boxes = []
-    for node in root.children:
-        if node.has_geometry:
-            continue  # ez maga egy alkatrész (pl. önálló panel), nem összeállítás
-        if not _has_panel_descendant(node):
-            continue  # pl. csak hardware-t tartalmazó konténer
-        if _count_geometry_descendants(node) < MIN_PARTS_FOR_ASSEMBLY:
-            continue  # egyetlen panelt csomagoló konténer (pl. egy önálló ajtó)
-
-        bbox = subtree_world_bbox(node)
-        if bbox is None:
-            continue
-        mins, maxs = bbox
-        x0, z0 = mins[0], mins[2]
-        width, depth = maxs[0] - mins[0], maxs[2] - mins[2]
-        module_boxes.append((node, x0, z0, width, depth))
-
-    if not module_boxes:
+    modules = _collect_layout_modules(root)
+    if not modules:
         raise ValueError("Nincs egyetlen geometriával rendelkező modul sem.")
 
-    for node, x0, z0, width, depth in module_boxes:
-        points = [
-            (x0, z0), (x0 + width, z0),
-            (x0 + width, z0 + depth), (x0, z0 + depth),
-        ]
-        msp.add_lwpolyline(points, close=True)
-        msp.add_text(
-            node.name, dxfattribs={"height": 40.0},
-        ).set_placement((x0 + 15, z0 + 15))
-
-    all_x0 = min(b[1] for b in module_boxes)
-    all_z0 = min(b[2] for b in module_boxes)
-    all_x1 = max(b[1] + b[3] for b in module_boxes)
-    all_z1 = max(b[2] + b[4] for b in module_boxes)
-
-    _render_dimension_lines(
-        msp,
-        rectangle_dimensions(all_x0, all_z0, all_x1 - all_x0, all_z1 - all_z0, offset=150.0),
-    )
+    u0, bottom, u1, v1 = _render_layout_view(msp, modules, u_axis=0, v_axis=2)
 
     msp.add_text(
         label, dxfattribs={"height": 200.0},
-    ).set_placement((all_x0, all_z1 + 400.0))
+    ).set_placement((u0, v1 + 400.0))
 
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     doc.saveas(str(path))
+
+
+def export_front_layout(root, path, label="Konyha elrendezes (elolnezet)"):
+    """
+    A teljes konyha ELÖLNÉZETE (VILÁG X-Y sík): ugyanaz, mint az
+    export_layout, csak szemből - hogyan állnak egymás mellett a
+    szekrények, ha a konyhára ránézünk.
+    """
+    doc = ezdxf.new(setup=True)
+    _ensure_dimstyle(doc)
+    msp = doc.modelspace()
+
+    modules = _collect_layout_modules(root)
+    if not modules:
+        raise ValueError("Nincs egyetlen geometriával rendelkező modul sem.")
+
+    u0, bottom, u1, v1 = _render_layout_view(msp, modules, u_axis=0, v_axis=1)
+
+    msp.add_text(
+        label, dxfattribs={"height": 200.0},
+    ).set_placement((u0, v1 + 400.0))
+
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    doc.saveas(str(path))
+
+
+def export_full_layout(root, path, label="Konyha elrendezes - attekinto rajz"):
+    """
+    A teljes bútorzat áttekintő rajza EGY lapon, HÁROM nézettel
+    (felülnézet, oldalnézet, elölnézet), egymás alatt: minden modul
+    TELJES panel-szerkezete látszik (nem csak egy befoglaló téglalap),
+    a LÁTHATÓ élek folytonos, a KÖZELEBBI elemek (akár egy másik modul
+    is!) által ELTAKART élek szaggatott vonallal - ugyanaz a
+    rajzolásmód, mint egyetlen bútorelem szerkezeti rajzánál
+    (export_construction_views), csak az ÖSSZES modulra együtt, a
+    valódi, egymáshoz képesti világpozícióban. Minden nézeten a
+    modulhatárok lánc-méretvonala (hol kezdődik/végződik egy-egy elem)
+    és az egész elrendezés össz-mérete is szerepel.
+    """
+    doc = ezdxf.new(setup=True)
+    _ensure_dimstyle(doc)
+    msp = doc.modelspace()
+
+    modules = _collect_layout_modules(root)
+    if not modules:
+        raise ValueError("Nincs egyetlen geometriával rendelkező modul sem.")
+
+    axes = layout_axes(root)
+    view_specs = layout_view_specs(axes)
+    views_data = full_layout_views(modules, axes)
+    if views_data is None:
+        raise ValueError("Nincs egyetlen panel-elem sem a modulokban.")
+
+    # A nézeteket egymás ALÁ rakjuk a lapon. Mivel egy nézet (pl. az
+    # elölnézet) sokkal magasabb lehet, mint amennyit egy fix távolsággal
+    # elő tudnánk jósolni (magas szekrénysor esetén akár 2000+ mm), előbb
+    # mindig a KÖVETKEZŐ nézet SAJÁT magasságát vesszük figyelembe, hogy
+    # sose csússzon egybe az előzővel.
+    prev_bottom = None
+    first_top = None
+
+    for view_label in ("felülnézet", "oldalnézet", "elölnézet"):
+        vdata = views_data[view_label]
+        rects = vdata["rects"]
+        hardware = vdata["hardware"]
+        view = vdata["view"]
+        u0, _v0 = vdata["origin"]
+        u_axis = view_specs[view_label][0]
+
+        y_offset = 0.0 if prev_bottom is None else prev_bottom - LAYOUT_VIEW_GAP_MM - view.height
+        if prev_bottom is None:
+            first_top = view.height
+
+        segments = compute_visible_segments(rects)
+        _add_segments(msp, segments, x_offset=0.0, y_offset=y_offset)
+        _add_hardware_polygons(msp, hardware, x_offset=0.0, y_offset=y_offset)
+
+        # modulhatárok lánc-méretvonala: hol kezdődik/végződik egy-egy elem
+        u_edges = sorted(
+            {m_mins[u_axis] - u0 for _, (m_mins, m_maxs) in modules}
+            | {m_maxs[u_axis] - u0 for _, (m_mins, m_maxs) in modules}
+        )
+        chain = chain_dimensions(u_edges, "horizontal", fixed=y_offset, offset=LAYOUT_CHAIN_OFFSET_MM)
+        _render_dimension_lines(msp, chain)
+
+        overall = rectangle_dimensions(0.0, y_offset, view.width, view.height, offset=LAYOUT_OVERALL_OFFSET_MM)
+        _render_dimension_lines(msp, overall)
+
+        bottom = y_offset - LAYOUT_OVERALL_OFFSET_MM - MODULE_LABEL_HEIGHT_MM * 4
+        msp.add_text(
+            view_label, dxfattribs={"height": MODULE_LABEL_HEIGHT_MM},
+        ).set_placement((0.0, bottom))
+
+        prev_bottom = bottom
+
+    msp.add_text(
+        label, dxfattribs={"height": 200.0},
+    ).set_placement((0.0, first_top + 400.0))
+
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    doc.saveas(str(path))
+
 
 def _add_segments(msp, segments, x_offset=0.0, y_offset=0.0):
     for seg in segments:

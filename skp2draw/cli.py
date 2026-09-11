@@ -2,7 +2,8 @@
 Parancssori belépési pont: egy .skp fájlból legenerálja
   1) az összes EGYEDI MÉRETŰ panel-változat (alkatrész-szintű) DXF rajzát,
   2) az összes EGYEDI MÉRETŰ bútorelem-modul (összeállítás-szintű) DXF rajzát,
-  3) a teljes konyha elrendezés-rajzát (alaprajz).
+  3) a teljes bútorzat áttekintő rajzát (felülnézet + elölnézet, pozíciókkal
+     és fő méretekkel).
 """
 from __future__ import annotations
 import argparse
@@ -13,7 +14,7 @@ from skp2draw.parser.reader import load_scene
 from skp2draw.parser.model import build_tree
 from skp2draw.hierarchy import collect_unique_panels, collect_unique_assemblies
 from skp2draw.geometry.projection import panel_views, assembly_construction_views
-from skp2draw.drawing.dxf_export import export_views, export_construction_views, export_layout
+from skp2draw.drawing.dxf_export import export_views, export_construction_views, export_full_layout
 
 
 def _safe_filename(name: str) -> str:
@@ -83,15 +84,15 @@ def generate_all_assemblies(skp_path, output_dir) -> list[Path]:
 
 
 def generate_layout(skp_path, output_dir) -> Path:
-    """A teljes konyha elrendezés-rajza (alaprajz)."""
+    """A teljes bútorzat áttekintő rajza (felülnézet + elölnézet, pozíciókkal és fő méretekkel)."""
     scene = load_scene(skp_path)
     root = build_tree(scene)
 
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    path = output_dir / "konyha_elrendezes.dxf"
-    export_layout(root, path)
+    path = output_dir / "konyha_attekintes.dxf"
+    export_full_layout(root, path)
     return path
 
 
@@ -119,7 +120,7 @@ def main():
 
     print()
     layout = generate_layout(args.skp_file, args.output)
-    print(f"Elrendezés-rajz elkészült: {layout}")
+    print(f"Áttekintő elrendezés-rajz elkészült: {layout}")
 
 
 if __name__ == "__main__":
