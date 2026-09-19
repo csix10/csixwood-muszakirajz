@@ -9,7 +9,12 @@ from pathlib import Path
 import ezdxf
 
 from skp2draw.geometry.bbox import subtree_world_bbox
-from skp2draw.hierarchy import _has_panel_descendant, _count_geometry_descendants, MIN_PARTS_FOR_ASSEMBLY
+from skp2draw.hierarchy import (
+    _has_panel_descendant,
+    _count_geometry_descendants,
+    _has_badge_descendant,
+    MIN_PARTS_FOR_ASSEMBLY,
+)
 from skp2draw.geometry.projection import assembly_construction_views, layout_axes, layout_view_specs, full_layout_views
 from skp2draw.geometry.hidden_line import compute_visible_segments
 from skp2draw.dimensioning.rules import rectangle_dimensions, chain_dimensions
@@ -111,23 +116,31 @@ LAYOUT_VIEW_GAP_MM = 800.0
 MODULE_LABEL_HEIGHT_MM = 30.0
 
 
-def _collect_layout_modules(root):
+def _collect_layout_modules(root, badge_keys=None):
     """
-    A root közvetlen gyerekei közül a VALÓDI ÖSSZEÁLLÍTÁSOKAT gyűjti össze
-    (ugyanaz a szűrés, mint collect_unique_assemblies-nál: nincs saját
-    geometriája, van legalább egy panel-leszármazottja, és legalább
-    MIN_PARTS_FOR_ASSEMBLY db geometriával rendelkező leszármazottja),
-    a VILÁG-koordinátás befoglaló dobozukkal (mins, maxs) együtt - ez
-    adja meg minden modul TÉNYLEGES, egymáshoz képesti helyzetét.
+    A root közvetlen gyerekei közül a VALÓDI, a modellhez tartozó
+    elemeket gyűjti össze, a VILÁG-koordinátás befoglaló dobozukkal
+    (mins, maxs) együtt - ez adja meg minden modul TÉNYLEGES, egymáshoz
+    képesti helyzetét.
+
+    Ha `badge_keys` meg van adva (skp2draw.badges.load_badge_keys), a
+    szűrés a Badges-alapú szabályt használja (lásd:
+    hierarchy._has_badge_descendant) - UGYANAZ a szabály, mint a
+    collect_unique_assemblies-nél. Ha None, a régi (legalább N db
+    alkatrészből álló összeállítás) heurisztika marad érvényben.
     """
     modules = []
     for node in root.children:
-        if node.has_geometry:
-            continue
-        if not _has_panel_descendant(node):
-            continue
-        if _count_geometry_descendants(node) < MIN_PARTS_FOR_ASSEMBLY:
-            continue
+        if badge_keys is not None:
+            if not _has_badge_descendant(node, badge_keys):
+                continue
+        else:
+            if node.has_geometry:
+                continue
+            if not _has_panel_descendant(node):
+                continue
+            if _count_geometry_descendants(node) < MIN_PARTS_FOR_ASSEMBLY:
+                continue
         bbox = subtree_world_bbox(node)
         if bbox is None:
             continue
@@ -185,19 +198,21 @@ def _render_layout_view(msp, modules, u_axis, v_axis, v_offset=0.0):
     return all_u0, bottom, all_u1, all_v1
 
 
-def export_layout(root, path, label="Konyha elrendezes (felulnezet)"):
+def export_layout(root, path, label="Konyha elrendezes (felulnezet)", badge_keys=None):
     """
-    A teljes konyha alaprajza (felülnézet, VILÁG X-Z sík): minden közvetlen
-    gyerek-modul (VALÓDI ÖSSZEÁLLÍTÁS) saját lábnyomat-téglalapja a
-    tényleges világpozícióban - így látszik, melyik modul hol áll a
-    másikhoz képest -, névvel, a modulhatárok lánc-méretvonalával, és
-    az egész elrendezés össz-méretével.
+    A teljes konyha alaprajza (felülnézet, VILÁG X-Z sík): minden
+    közvetlen gyerek-modul saját lábnyomat-téglalapja a tényleges
+    világpozícióban - így látszik, melyik modul hol áll a másikhoz
+    képest -, névvel, a modulhatárok lánc-méretvonalával, és az egész
+    elrendezés össz-méretével.
+
+    `badge_keys`: lásd _collect_layout_modules.
     """
     doc = ezdxf.new(setup=True)
     _ensure_dimstyle(doc)
     msp = doc.modelspace()
 
-    modules = _collect_layout_modules(root)
+    modules = _collect_layout_modules(root, badge_keys)
     if not modules:
         raise ValueError("Nincs egyetlen geometriával rendelkező modul sem.")
 
@@ -212,17 +227,19 @@ def export_layout(root, path, label="Konyha elrendezes (felulnezet)"):
     doc.saveas(str(path))
 
 
-def export_front_layout(root, path, label="Konyha elrendezes (elolnezet)"):
+def export_front_layout(root, path, label="Konyha elrendezes (elolnezet)", badge_keys=None):
     """
     A teljes konyha ELÖLNÉZETE (VILÁG X-Y sík): ugyanaz, mint az
     export_layout, csak szemből - hogyan állnak egymás mellett a
     szekrények, ha a konyhára ránézünk.
+
+    `badge_keys`: lásd _collect_layout_modules.
     """
     doc = ezdxf.new(setup=True)
     _ensure_dimstyle(doc)
     msp = doc.modelspace()
 
-    modules = _collect_layout_modules(root)
+    modules = _collect_layout_modules(root, badge_keys)
     if not modules:
         raise ValueError("Nincs egyetlen geometriával rendelkező modul sem.")
 
@@ -237,7 +254,7 @@ def export_front_layout(root, path, label="Konyha elrendezes (elolnezet)"):
     doc.saveas(str(path))
 
 
-def export_full_layout(root, path, label="Konyha elrendezes - attekinto rajz"):
+def export_full_layout(root, path, label="Konyha elrendezes - attekinto rajz", badge_keys=None):
     """
     A teljes bútorzat áttekintő rajza EGY lapon, HÁROM nézettel
     (felülnézet, oldalnézet, elölnézet), egymás alatt: minden modul
@@ -249,12 +266,14 @@ def export_full_layout(root, path, label="Konyha elrendezes - attekinto rajz"):
     valódi, egymáshoz képesti világpozícióban. Minden nézeten a
     modulhatárok lánc-méretvonala (hol kezdődik/végződik egy-egy elem)
     és az egész elrendezés össz-mérete is szerepel.
+
+    `badge_keys`: lásd _collect_layout_modules.
     """
     doc = ezdxf.new(setup=True)
     _ensure_dimstyle(doc)
     msp = doc.modelspace()
 
-    modules = _collect_layout_modules(root)
+    modules = _collect_layout_modules(root, badge_keys)
     if not modules:
         raise ValueError("Nincs egyetlen geometriával rendelkező modul sem.")
 

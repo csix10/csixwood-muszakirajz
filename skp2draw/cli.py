@@ -4,6 +4,13 @@ Parancssori belépési pont: egy .skp fájlból legenerálja
   2) az összes EGYEDI MÉRETŰ bútorelem-modul (összeállítás-szintű) DXF rajzát,
   3) a teljes bútorzat áttekintő rajzát (felülnézet + elölnézet, pozíciókkal
      és fő méretekkel).
+
+Ha meg van adva egy OpenCutList CSV export (--csv), MINDHÁROM szint
+(alkatrész, bútorelem, elrendezés) szűrése a Badges (nem üres) mezőn
+alapul: csak azok az elemek kerülnek be, amiket ténylegesen megcímkéztél
+az OpenCutList-ben - lásd: skp2draw.badges,
+skp2draw.hierarchy.collect_unique_panels,
+skp2draw.hierarchy.collect_unique_assemblies.
 """
 from __future__ import annotations
 import argparse
@@ -15,6 +22,7 @@ from skp2draw.parser.model import build_tree
 from skp2draw.hierarchy import collect_unique_panels, collect_unique_assemblies
 from skp2draw.geometry.projection import panel_views, assembly_construction_views
 from skp2draw.drawing.dxf_export import export_views, export_construction_views, export_full_layout
+from skp2draw.badges import load_badge_keys
 
 
 def _safe_filename(name: str) -> str:
@@ -35,11 +43,18 @@ def _unique_filename(base: str, width, height, thickness, used_filenames: set) -
     return filename
 
 
-def generate_all_panels(skp_path, output_dir) -> list[Path]:
-    """Minden egyedi méretű panel-változat (alkatrész-szintű rajz)."""
+def generate_all_panels(skp_path, output_dir, badge_keys=None) -> list[Path]:
+    """
+    Minden egyedi méretű panel-változat (alkatrész-szintű rajz).
+    `badge_keys`: lásd skp2draw.badges.load_badge_keys - ha meg van adva,
+    csak a CSV-ben nem üres Badges-szel szereplő panelek kerülnek be (pl.
+    egy konyhai gép panel-szerű, de nem vágandó lapja - mint egy főzőlap
+    üveglapja - enélkül tévesen bekerülne, mert geometriailag ugyanúgy
+    "panelnek" néz ki, mint egy valódi bútorlap).
+    """
     scene = load_scene(skp_path)
     root = build_tree(scene)
-    panels = collect_unique_panels(root)
+    panels = collect_unique_panels(root, badge_keys)
 
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -58,11 +73,16 @@ def generate_all_panels(skp_path, output_dir) -> list[Path]:
     return written
 
 
-def generate_all_assemblies(skp_path, output_dir) -> list[Path]:
-    """Minden egyedi méretű bútorelem-modul (összeállítás-szintű, szerkezeti rajz)."""
+def generate_all_assemblies(skp_path, output_dir, badge_keys=None) -> list[Path]:
+    """
+    Minden egyedi méretű, valódi bútorelem-modul (összeállítás-szintű,
+    szerkezeti rajz). `badge_keys`: lásd skp2draw.badges.load_badge_keys -
+    ha meg van adva, csak a legalább egy Badges-elt alkatrészt/leszármazottat
+    tartalmazó modulok kerülnek be (lásd: collect_unique_assemblies).
+    """
     scene = load_scene(skp_path)
     root = build_tree(scene)
-    assemblies = collect_unique_assemblies(root)
+    assemblies = collect_unique_assemblies(root, badge_keys)
 
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -83,8 +103,12 @@ def generate_all_assemblies(skp_path, output_dir) -> list[Path]:
     return written
 
 
-def generate_layout(skp_path, output_dir) -> Path:
-    """A teljes bútorzat áttekintő rajza (felülnézet + elölnézet, pozíciókkal és fő méretekkel)."""
+def generate_layout(skp_path, output_dir, badge_keys=None) -> Path:
+    """
+    A teljes bútorzat áttekintő rajza (felülnézet + oldalnézet +
+    elölnézet, pozíciókkal és fő méretekkel). `badge_keys`: lásd
+    generate_all_assemblies.
+    """
     scene = load_scene(skp_path)
     root = build_tree(scene)
 
@@ -92,7 +116,7 @@ def generate_layout(skp_path, output_dir) -> Path:
     output_dir.mkdir(parents=True, exist_ok=True)
 
     path = output_dir / "konyha_attekintes.dxf"
-    export_full_layout(root, path)
+    export_full_layout(root, path, badge_keys=badge_keys)
     return path
 
 
@@ -105,21 +129,31 @@ def main():
         "-o", "--output", default="output",
         help="A kimeneti mappa (alapértelmezett: ./output)",
     )
+    parser.add_argument(
+        "--csv", default=None,
+        help=(
+            "OpenCutList CSV export elérési útja. Ha meg van adva, a "
+            "bútorelem-szintű és az elrendezés-rajzhoz tartozó szűrés a "
+            "Badges (nem üres) mezőn alapul, nem a darabszámon."
+        ),
+    )
     args = parser.parse_args()
 
-    panels = generate_all_panels(args.skp_file, args.output)
+    badge_keys = load_badge_keys(args.csv) if args.csv else None
+
+    panels = generate_all_panels(args.skp_file, args.output, badge_keys)
     print(f"{len(panels)} alkatrész-szintű rajz elkészült ({args.output}/):")
     for p in panels:
         print(f"  - {p.name}")
 
     print()
-    assemblies = generate_all_assemblies(args.skp_file, args.output + "/butorelemek")
+    assemblies = generate_all_assemblies(args.skp_file, args.output + "/butorelemek", badge_keys)
     print(f"{len(assemblies)} bútorelem-szintű rajz elkészült ({args.output}/butorelemek/):")
     for p in assemblies:
         print(f"  - {p.name}")
 
     print()
-    layout = generate_layout(args.skp_file, args.output)
+    layout = generate_layout(args.skp_file, args.output, badge_keys)
     print(f"Áttekintő elrendezés-rajz elkészült: {layout}")
 
 

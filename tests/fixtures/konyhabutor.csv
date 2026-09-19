@@ -1,0 +1,112 @@
+﻿No.;Designation;Quantity;Length - raw;Width - raw;Thickness - raw;Length;Width;Thickness;Area - final;Type;Material;Material description;URL of the material;Instance names;Description;URL;Badges;Edge Length 1;Edge Length 2;Edge Width 1;Edge Width 2;Frontside;Backside;Tags
+A;Szokli;1;3586 mm;95 mm;18 mm;3586 mm;95 mm;18 mm;"";Undefined;121FS15;"";"";"";abb;"";butorlap;"";"";"";"";"";"";Layer0
+B;Szegő;1;3500 mm;210 mm;18 mm;3500 mm;210 mm;18 mm;"";Undefined;121FS15;"";"";"";abb;"";butorlap;"";"";"";"";"";"";Layer0
+C;Szegő;1;2040 mm;210 mm;18 mm;2040 mm;210 mm;18 mm;"";Undefined;121FS15;"";"";"";abb;"";butorlap;"";"";"";"";"";"";Layer0
+D;Oldal#3;14;900 mm;320 mm;18 mm;900 mm;320 mm;18 mm;"";Undefined;121FS15;"";"";"";Abb;"";butorlap;"";"";"";"";"";"";Layer0
+E;Alja;1;800 mm;560 mm;18 mm;800 mm;560 mm;18 mm;"";Undefined;121FS15;"";"";"";Abb;"";butorlap;"";"";"";"";"";"";Layer0
+F;Alja#3;3;794 mm;320 mm;18 mm;794 mm;320 mm;18 mm;"";Undefined;121FS15;"";"";"";A;"";butorlap;"";"";"";"";"";"";Layer0
+G;Teteje#1;3;794 mm;306 mm;18 mm;794 mm;306 mm;18 mm;"";Undefined;121FS15;"";"";"";A;"";butorlap;"";"";"";"";"";"";Layer0
+H;Polc#2;6;794 mm;286 mm;18 mm;794 mm;286 mm;18 mm;"";Undefined;121FS15;"";"";"";A;"";butorlap;"";"";"";"";"";"";Layer0
+I;Összekötő;2;764 mm;100 mm;18 mm;764 mm;100 mm;18 mm;"";Undefined;121FS15;"";"";"";A;"";butorlap;"";"";"";"";"";"";Layer0
+J;Oldal#4;2;760 mm;320 mm;18 mm;760 mm;320 mm;18 mm;"";Undefined;121FS15;"";"";"";Abb;"";butorlap;"";"";"";"";"";"";Layer0
+K;Szegő;1;720 mm;86 mm;18 mm;720 mm;86 mm;18 mm;"";Undefined;121FS15;"";"";"";abb;"";butorlap;"";"";"";"";"";"";Layer0
+L;Oldal;4;702 mm;560 mm;18 mm;702 mm;560 mm;18 mm;"";Undefined;121FS15;"";"";"";A;"";butorlap;"";"";"";"";"";"";Layer0
+M;Oldal#1;4;702 mm;560 mm;18 mm;702 mm;560 mm;18 mm;"";Undefined;121FS15;"";"";"";A;"";butorlap;"";"";"";"";"";"";Layer0
+N;Oldal#2;2;702 mm;560 mm;18 mm;702 mm;560 mm;18 mm;"";Undefined;121FS15;"";"";"";A;"";butorlap;"";"";"";"";"";"";Layer0
+O;Alja#3;3;644 mm;320 mm;18 mm;644 mm;320 mm;18 mm;"";Undefined;121FS15;"";"";"";A;"";butorlap;"";"";"";"";"";"";Layer0
+P;Teteje#1;3;644 mm;306 mm;18 mm;644 mm;306 mm;18 mm;"";Undefined;121FS15;"";"";"";A;"";butorlap;"";"";"";"";"";"";Layer0
+Q;Oldal;4;642 mm;560 mm;18 mm;642 mm;560 mm;18 mm;"";Undefined;121FS15;"";"";"";A;"";butorlap;"";"";"";"";"";"";Layer0
+R;Alja;1;600 mm;560 mm;18 mm;600 mm;560 mm;18 mm;"";Undefined;121FS15;"";"";"";Abb;"";butorlap;"";"";"";"";"";"";Layer0
+S;Alja#1;1;600 mm;560 mm;18 mm;600 mm;560 mm;18 mm;"";Undefined;121FS15;"";"";"";Abb;"";butorlap;"";"";"";"";"";"";Layer0
+T;Polc#1;1;564 mm;560 mm;18 mm;564 mm;560 mm;18 mm;"";Undefined;121FS15;"";"";"";A;"";butorlap;"";"";"";"";"";"";Layer0
+U;Alja#4;1;564 mm;320 mm;18 mm;564 mm;320 mm;18 mm;"";Undefined;121FS15;"";"";"";A;"";butorlap;"";"";"";"";"";"";Layer0
+V;Teteje;1;564 mm;306 mm;18 mm;564 mm;306 mm;18 mm;"";Undefined;121FS15;"";"";"";A;"";butorlap;"";"";"";"";"";"";Layer0
+W;Polc#3;1;564 mm;286 mm;18 mm;564 mm;286 mm;18 mm;"";Undefined;121FS15;"";"";"";A;"";butorlap;"";"";"";"";"";"";Layer0
+X;Összekötő;2;564 mm;100 mm;18 mm;564 mm;100 mm;18 mm;"";Undefined;121FS15;"";"";"";A;"";butorlap;"";"";"";"";"";"";Layer0
+Y;Összekötő#1;1;564 mm;100 mm;18 mm;564 mm;100 mm;18 mm;"";Undefined;121FS15;"";"";"";A;"";butorlap;"";"";"";"";"";"";Layer0
+Z;Alja#2;1;560 mm;490 mm;18 mm;560 mm;490 mm;18 mm;"";Undefined;121FS15;"";"";"";Abb;"";butorlap;"";"";"";"";"";"";Layer0
+AA;Alja;2;560 mm;460 mm;18 mm;560 mm;460 mm;18 mm;"";Undefined;121FS15;"";"";"";Abb;"";butorlap;"";"";"";"";"";"";Layer0
+AB;Alja#1;1;560 mm;410 mm;18 mm;560 mm;410 mm;18 mm;"";Undefined;121FS15;"";"";"";Abb;"";butorlap;"";"";"";"";"";"";Layer0
+AC;Polc#3;2;536 mm;424 mm;18 mm;536 mm;424 mm;18 mm;"";Undefined;121FS15;"";"";"";A;"";butorlap;"";"";"";"";"";"";Layer0
+AD;Polc;1;536 mm;374 mm;18 mm;536 mm;374 mm;18 mm;"";Undefined;121FS15;"";"";"";A;"";butorlap;"";"";"";"";"";"";Layer0
+AE;Szokli;5;512 mm;95 mm;18 mm;512 mm;95 mm;18 mm;"";Undefined;121FS15;"";"";"";abb;"";butorlap;"";"";"";"";"";"";Layer0
+AF;Szokli;2;460 mm;95 mm;18 mm;460 mm;95 mm;18 mm;"";Undefined;121FS15;"";"";"";abb;"";butorlap;"";"";"";"";"";"";Layer0
+AG;Összekötő#2;2;454 mm;100 mm;18 mm;454 mm;100 mm;18 mm;"";Undefined;121FS15;"";"";"";A;"";butorlap;"";"";"";"";"";"";Layer0
+AH;Összekötő;4;424 mm;100 mm;18 mm;424 mm;100 mm;18 mm;"";Undefined;121FS15;"";"";"";A;"";butorlap;"";"";"";"";"";"";Layer0
+AI;Alja#3;1;374 mm;320 mm;18 mm;374 mm;320 mm;18 mm;"";Undefined;121FS15;"";"";"";A;"";butorlap;"";"";"";"";"";"";Layer0
+AJ;Teteje#1;1;374 mm;306 mm;18 mm;374 mm;306 mm;18 mm;"";Undefined;121FS15;"";"";"";A;"";butorlap;"";"";"";"";"";"";Layer0
+AK;Polc#2;2;374 mm;286 mm;18 mm;374 mm;286 mm;18 mm;"";Undefined;121FS15;"";"";"";A;"";butorlap;"";"";"";"";"";"";Layer0
+AL;Összekötő#1;2;374 mm;100 mm;18 mm;374 mm;100 mm;18 mm;"";Undefined;121FS15;"";"";"";A;"";butorlap;"";"";"";"";"";"";Layer0
+AM;Szegő;3;302 mm;210 mm;18 mm;302 mm;210 mm;18 mm;"";Undefined;121FS15;"";"";"";abb;"";butorlap;"";"";"";"";"";"";Layer0
+A;2526-148 MATT FEKETE;21;154 mm;30 mm;14 mm;154 mm;30 mm;14 mm;"";Undefined;2526-148 MATT FEKETE;"";"";"";"";"";fogantyu;"";"";"";"";"";"";Layer0
+A;2526-340 MATT FEKETE;9;346 mm;30 mm;14 mm;346 mm;30 mm;14 mm;"";Undefined;2526-340 MATT FEKETE;"";"";"";"";"";fogantyu;"";"";"";"";"";"";Layer0
+A;vitrin üveg;6;796 mm;236 mm;3 mm;796 mm;236 mm;3 mm;"";Undefined;3mm-es üveg;"";"";"";"";"";uveg;"";"";"";"";"";"";Layer0
+A;Üvegpolc;6;644 mm;286 mm;6 mm;644 mm;286 mm;6 mm;"";Undefined;6mm-es üveg;"";"";"";"";"";uveg;"";"";"";"";"";"";Layer0
+A;801 00 01 00 DX balos;8;58 mm;34 mm;3 mm;58 mm;34 mm;3 mm;"";Undefined;801 00 01 00 DX balos;"";"";"";"";"";fuggeszto;"";"";"";"";"";"";Layer0
+B;801 00 01 00 DX balos;8;58 mm;34 mm;3 mm;58 mm;34 mm;3 mm;"";Undefined;801 00 01 00 DX balos;"";"";"";"";"";fuggeszto;"";"";"";"";"";"";Layer0
+A;Antaro D_internal_rail_drawer M_450#1;1;751 mm;92 mm;38 mm;751 mm;92 mm;38 mm;"";Undefined;<auto>10;"";"";"";Antaro D_internal_rail_drawer M_450;"";"";"";"";"";"";"";"";Layer0
+B;Antaro D_internal_rail_drawer M_450#1;3;554 mm;92 mm;38 mm;554 mm;92 mm;38 mm;"";Undefined;<auto>10;"";"";"";Antaro D_internal_rail_drawer M_450;"";"";"";"";"";"";"";"";Layer0
+C;Antaro D_internal_rail_drawer M_450#1;2;417 mm;92 mm;38 mm;417 mm;92 mm;38 mm;"";Undefined;<auto>10;"";"";"";Antaro D_internal_rail_drawer M_450;"";"";"";"";"";"";"";"";Layer0
+A;Antaro D_internal_rail_drawer M_450#2;2;751 mm;235 mm;92 mm;751 mm;235 mm;92 mm;"";Undefined;<auto>12;"";"";"";Antaro D_internal_rail_drawer M_450;"";"";"";"";"";"";"";"";Layer0
+B;Antaro D_internal_rail_drawer M_450#2;1;554 mm;235 mm;92 mm;554 mm;235 mm;92 mm;"";Undefined;<auto>12;"";"";"";Antaro D_internal_rail_drawer M_450;"";"";"";"";"";"";"";"";Layer0
+A;Bemarós Ledprofil;6;864 mm;24 mm;7 mm;864 mm;24 mm;7 mm;"";Undefined;Color M08;"";"";"";"";"";sin;"";"";"";"";"";"";Layer0
+A;CAMAR 801 22 Z1 IN balos;8;78 mm;50 mm;26 mm;78 mm;50 mm;26 mm;"";Undefined;CAMAR 801 22 Z1 IN balos;"";"";"";"";"";fuggeszto;"";"";"";"";"";"";Layer0
+B;CAMAR 801 22 Z1 IN balos;8;78 mm;50 mm;26 mm;78 mm;50 mm;26 mm;"";Undefined;CAMAR 801 22 Z1 IN balos;"";"";"";"";"";fuggeszto;"";"";"";"";"";"";Layer0
+A;Camar szekrényakasztó sín;1;3464 mm;28 mm;6 mm;3464 mm;28 mm;6 mm;"";Undefined;Camar szekrényakasztó sín;"";"";"";"";"";fuggeszto;"";"";"";"";"";"";Layer0
+B;Camar szekrényakasztó sín;1;2004 mm;28 mm;6 mm;2004 mm;28 mm;6 mm;"";Undefined;Camar szekrényakasztó sín;"";"";"";"";"";fuggeszto;"";"";"";"";"";"";Layer0
+A;FDS-CLASSIC A Fiókrendszer 550mm H84 Fehér ;1;764 mm;546 mm;97 mm;764 mm;546 mm;97 mm;"";Undefined;FDS-CLASSIC A Fiókrendszer 550mm H84 Fehér;"";"";"";"";"";fiok;"";"";"";"";"";"";Layer0
+B;FDS-CLASSIC A Fiókrendszer 550mm H84 Fehér ;3;564 mm;546 mm;97 mm;564 mm;546 mm;97 mm;"";Undefined;FDS-CLASSIC A Fiókrendszer 550mm H84 Fehér;"";"";"";"";"";fiok;"";"";"";"";"";"";Layer0
+C;FDS-CLASSIC A Fiókrendszer 550mm H84 Fehér ;2;546 mm;424 mm;97 mm;546 mm;424 mm;97 mm;"";Undefined;FDS-CLASSIC A Fiókrendszer 550mm H84 Fehér;"";"";"";"";"";fiok;"";"";"";"";"";"";Layer0
+A;FDS-CLASSIC D Fiókrendszer 550mm H210 Fehér;2;764 mm;546 mm;240 mm;764 mm;546 mm;240 mm;"";Undefined;FDS-CLASSIC D Fiókrendszer 550mm H210 Fehér;"";"";"";"";"";fiok;"";"";"";"";"";"";Layer0
+B;FDS-CLASSIC D Fiókrendszer 550mm H210 Fehér;1;564 mm;546 mm;240 mm;564 mm;546 mm;240 mm;"";Undefined;FDS-CLASSIC D Fiókrendszer 550mm H210 Fehér;"";"";"";"";"";fiok;"";"";"";"";"";"";Layer0
+A;FDS-CLASSIC N Fiókrendszer 500mm H69 Fehér;1;564 mm;497 mm;80 mm;564 mm;497 mm;80 mm;"";Undefined;FDS-CLASSIC N Fiókrendszer 500mm H69 Fehér;"";"";"";"";"";fiok;"";"";"";"";"";"";Layer0
+A;Hátfal;2;646 mm;222 mm;19 mm;646 mm;222 mm;19 mm;"";Undefined;fehér 16mm;"";"";"";a;"";butorlap;"";"";"";"";"";"";7. Шухляди
+B;Hátfal;1;646 mm;91 mm;19 mm;646 mm;91 mm;19 mm;"";Undefined;fehér 16mm;"";"";"";a;"";butorlap;"";"";"";"";"";"";7. Шухляди
+C;Hátfal;1;477 mm;222 mm;19 mm;477 mm;222 mm;19 mm;"";Undefined;fehér 16mm;"";"";"";a;"";butorlap;"";"";"";"";"";"";7. Шухляди
+D;Hátfal;3;477 mm;91 mm;19 mm;477 mm;91 mm;19 mm;"";Undefined;fehér 16mm;"";"";"";a;"";butorlap;"";"";"";"";"";"";7. Шухляди
+E;Hátfal;2;359 mm;91 mm;19 mm;359 mm;91 mm;19 mm;"";Undefined;fehér 16mm;"";"";"";a;"";butorlap;"";"";"";"";"";"";7. Шухляди
+F;Fenéklap;2;662 mm;517 mm;18 mm;662 mm;517 mm;18 mm;"";Undefined;fehér 16mm;"";"";"";"";"";butorlap;"";"";"";"";"";"";7. Шухляди
+G;Fenéklap;1;517 mm;489 mm;18 mm;517 mm;489 mm;18 mm;"";Undefined;fehér 16mm;"";"";"";"";"";butorlap;"";"";"";"";"";"";7. Шухляди
+H;Fenéklap;1;489 mm;470 mm;16 mm;489 mm;470 mm;16 mm;"";Undefined;fehér 16mm;"";"";"";"";"";butorlap;"";"";"";"";"";"";7. Шухляди
+I;Hátfal;1;477 mm;76 mm;16 mm;477 mm;76 mm;16 mm;"";Undefined;fehér 16mm;"";"";"";a;"";butorlap;"";"";"";"";"";"";7. Шухляди
+J;Fenéklap;1;662 mm;517 mm;7 mm;662 mm;517 mm;7 mm;"";Undefined;fehér 16mm;"";"";"";"";"";butorlap;"";"";"";"";"";"";7. Шухляди
+K;Fenéklap;3;517 mm;489 mm;7 mm;517 mm;489 mm;7 mm;"";Undefined;fehér 16mm;"";"";"";"";"";butorlap;"";"";"";"";"";"";7. Шухляди
+L;Fenéklap;2;517 mm;368 mm;7 mm;517 mm;368 mm;7 mm;"";Undefined;fehér 16mm;"";"";"";"";"";butorlap;"";"";"";"";"";"";7. Шухляди
+A;Hátfal#1;3;887 mm;804 mm;4 mm;887 mm;804 mm;4 mm;"";Undefined;fehér HDF;"";"";"";"";"";HDF;"";"";"";"";"";"";Layer0
+B;Hátfal#1;3;887 mm;654 mm;4 mm;887 mm;654 mm;4 mm;"";Undefined;fehér HDF;"";"";"";"";"";HDF;"";"";"";"";"";"";Layer0
+C;Hátfal#1;1;887 mm;384 mm;4 mm;887 mm;384 mm;4 mm;"";Undefined;fehér HDF;"";"";"";"";"";HDF;"";"";"";"";"";"";Layer0
+D;Hátlap#1;1;790 mm;710 mm;4 mm;790 mm;710 mm;4 mm;"";Undefined;fehér HDF;"";"";"";"";"";HDF;"";"";"";"";"";"";Layer0
+E;Hátlap#1;1;710 mm;590 mm;4 mm;710 mm;590 mm;4 mm;"";Undefined;fehér HDF;"";"";"";"";"";HDF;"";"";"";"";"";"";Layer0
+F;Hátlap;1;710 mm;480 mm;4 mm;710 mm;480 mm;4 mm;"";Undefined;fehér HDF;"";"";"";"";"";HDF;"";"";"";"";"";"";Layer0
+G;Hátlap#2;1;710 mm;400 mm;4 mm;710 mm;400 mm;4 mm;"";Undefined;fehér HDF;"";"";"";"";"";HDF;"";"";"";"";"";"";Layer0
+H;Hátlap#1;2;650 mm;450 mm;4 mm;650 mm;450 mm;4 mm;"";Undefined;fehér HDF;"";"";"";"";"";HDF;"";"";"";"";"";"";Layer0
+I;Hátfal#2;1;607 mm;574 mm;4 mm;607 mm;574 mm;4 mm;"";Undefined;fehér HDF;"";"";"";"";"";HDF;"";"";"";"";"";"";Layer0
+J;Hátlap#2;1;590 mm;110 mm;4 mm;590 mm;110 mm;4 mm;"";Undefined;fehér HDF;"";"";"";"";"";HDF;"";"";"";"";"";"";Layer0
+A;Hátfalrögzítő sarok elem;48;10 mm;10 mm;10 mm;10 mm;10 mm;10 mm;"";Undefined;hátfalrögzítő sarok elem;"";"";"";"";"";kotoelem;"";"";"";"";"";"";Layer0
+B;Hátfalrögzítő sarok elem;28;10 mm;10 mm;10 mm;10 mm;10 mm;10 mm;"";Undefined;hátfalrögzítő sarok elem;"";"";"";"";"";kotoelem;"";"";"";"";"";"";Layer0
+C;Hátfalrögzítő sarok elem#1;9;10 mm;10 mm;10 mm;10 mm;10 mm;10 mm;"";Undefined;hátfalrögzítő sarok elem;"";"";"";"";kotoelem;kotoelem;"";"";"";"";"";"";Layer0
+A;Ajtó_11;6;896 mm;411 mm;18 mm;896 mm;411 mm;18 mm;"";Undefined;K162/K/R3 Nett62;"";"";"";"";"";MDF;"";"";"";"";"";"";Layer0
+B;Ajtó_9;1;896 mm;406 mm;18 mm;896 mm;406 mm;18 mm;"";Undefined;K162/K/R3 Nett62;"";"";"";"";"";MDF;"";"";"";"";"";"";Layer0
+C;Ajtó_14;6;896 mm;336 mm;18 mm;896 mm;336 mm;18 mm;"";Undefined;K162/K/R3 Nett62;"";"";"";"";"";MDF;"";"";"";"";"";"";Layer0
+D;Ajtó_8;2;796 mm;286 mm;18 mm;796 mm;286 mm;18 mm;"";Undefined;K162/K/R3 Nett62;"";"";"";"";"";MDF;"";"";"";"";"";"";Layer0
+E;Ajtó_7;1;796 mm;136 mm;18 mm;796 mm;136 mm;18 mm;"";Undefined;K162/K/R3 Nett62;"";"";"";"";"";MDF;"";"";"";"";"";"";Layer0
+F;Ajtó_10;2;756 mm;296 mm;18 mm;756 mm;296 mm;18 mm;"";Undefined;K162/K/R3 Nett62;"";"";"";"";"";MDF;"";"";"";"";"";"";Layer0
+G;Ajtó_6;1;716 mm;596 mm;18 mm;716 mm;596 mm;18 mm;"";Undefined;K162/K/R3 Nett62;"";"";"";"";"";MDF;"";"";"";"";"";"";Layer0
+H;Ajtó_5;1;716 mm;486 mm;18 mm;716 mm;486 mm;18 mm;"";Undefined;K162/K/R3 Nett62;"";"";"";"";"";MDF;"";"";"";"";"";"";Layer0
+I;Ajtó_1;1;716 mm;406 mm;18 mm;716 mm;406 mm;18 mm;"";Undefined;K162/K/R3 Nett62;"";"";"";"";"";MDF;"";"";"";"";"";"";Layer0
+J;Ajtó_4;1;596 mm;296 mm;18 mm;596 mm;296 mm;18 mm;"";Undefined;K162/K/R3 Nett62;"";"";"";"";"";MDF;"";"";"";"";"";"";Layer0
+K;Ajtó_3;3;596 mm;136 mm;18 mm;596 mm;136 mm;18 mm;"";Undefined;K162/K/R3 Nett62;"";"";"";"";"";MDF;"";"";"";"";"";"";Layer0
+L;Ajtó_2;1;596 mm;116 mm;18 mm;596 mm;116 mm;18 mm;"";Undefined;K162/K/R3 Nett62;"";"";"";"";"";MDF;"";"";"";"";"";"";Layer0
+M;Ajtó_13;2;516 mm;456 mm;18 mm;516 mm;456 mm;18 mm;"";Undefined;K162/K/R3 Nett62;"";"";"";"";"";MDF;"";"";"";"";"";"";Layer0
+N;Ajtó_12;2;456 mm;136 mm;18 mm;456 mm;136 mm;18 mm;"";Undefined;K162/K/R3 Nett62;"";"";"";"";"";MDF;"";"";"";"";"";"";Layer0
+A;Lamello 20-as;154;56 mm;23 mm;4 mm;56 mm;23 mm;4 mm;"";Undefined;lamello 20-as;"";"";"";"";"";kotoelem;"";"";"";"";"";"";Layer0
+A;Lábazatvédő profil;1;3586 mm;18 mm;5 mm;3586 mm;18 mm;5 mm;"";Undefined;Lábazatvédő profil;"";"";"";"";"";lab;"";"";"";"";"";"";Layer0
+B;Lábazatvédő profil;5;512 mm;18 mm;5 mm;512 mm;18 mm;5 mm;"";Undefined;Lábazatvédő profil;"";"";"";"";"";lab;"";"";"";"";"";"";Layer0
+C;Lábazatvédő profil;2;460 mm;18 mm;5 mm;460 mm;18 mm;5 mm;"";Undefined;Lábazatvédő profil;"";"";"";"";"";lab;"";"";"";"";"";"";Layer0
+A;Munkalap;1;3596 mm;600 mm;38 mm;3596 mm;600 mm;38 mm;"";Undefined;munkalap;"";"";"";BB;"";munkalap;"";"";"";"";"";"";Layer0
+B;Munkalap;1;2050 mm;600 mm;38 mm;2050 mm;600 mm;38 mm;"";Undefined;munkalap;"";"";"";BB;"";munkalap;"";"";"";"";"";"";Layer0
+A;polctartó fém 5x16;48;19 mm;10 mm;10 mm;19 mm;10 mm;10 mm;"";Undefined;polctartó fém 5x16;"";"";"";"";"";kotoelem;"";"";"";"";"";"";Layer0
+A;Ráütődő beépített fékkel, takaróval;38;75 mm;64 mm;37 mm;75 mm;64 mm;37 mm;"";Undefined;Ráütődő beépített fékkel, takaróval;"";"";"";"";"";pant;"";"";"";"";"";"";Layer0
+A;Sarokvas 20x20mm;4;20 mm;20 mm;19 mm;20 mm;20 mm;19 mm;"";Undefined;sarokvas 20x20mm;"";"";"";"";"";kotoelem;"";"";"";"";"";"";Layer0
+A;szekrényláb 150mm fekete műanyag;30;100 mm;60 mm;60 mm;100 mm;60 mm;60 mm;"";Undefined;szekrényláb 150mm fekete műanyag1;"";"";"";"";"";lab;"";"";"";"";"";"";Layer0
+A;Üvegpolctartó egyenes M124;24;21 mm;12 mm;12 mm;21 mm;12 mm;12 mm;"";Undefined;Üvegpolctartó egyenes M124;"";"";"";"";"";kotoelem;"";"";"";"";"";"";Layer0
