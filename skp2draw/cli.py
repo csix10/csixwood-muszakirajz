@@ -15,13 +15,19 @@ skp2draw.hierarchy.collect_unique_assemblies.
 from __future__ import annotations
 import argparse
 import re
+import tempfile
 from pathlib import Path
 
 from skp2draw.parser.reader import load_scene
 from skp2draw.parser.model import build_tree
 from skp2draw.hierarchy import collect_unique_panels, collect_unique_assemblies
-from skp2draw.geometry.projection import panel_views, assembly_construction_views
-from skp2draw.drawing.dxf_export import export_views, export_construction_views, export_full_layout
+from skp2draw.geometry.projection import (
+    panel_views, assembly_construction_views, find_touching_hardware, panel_hardware_overlays,
+)
+from skp2draw.drawing.dxf_export import (
+    export_views, export_construction_views, export_full_layout, export_full_layout_view,
+)
+from skp2draw.drawing.pdf_export import render_dxf_to_png, build_pdf_from_images
 from skp2draw.badges import load_badge_keys
 
 
@@ -51,6 +57,13 @@ def generate_all_panels(skp_path, output_dir, badge_keys=None) -> list[Path]:
     egy konyhai gép panel-szerű, de nem vágandó lapja - mint egy főzőlap
     üveglapja - enélkül tévesen bekerülne, mert geometriailag ugyanúgy
     "panelnek" néz ki, mint egy valódi bútorlap).
+
+    Minden panel MINDHÁROM nézetén megjelennek a VELE EGY MODULBAN lévő,
+    ténylegesen ÉRINTKEZŐ, ÉS mindhárom oldalán 10cm-nél kisebb kötőelemek
+    (zsanér, dűbel, polctartó stb.) is, a középpontjuktól a legközelebbi
+    alkatrész-élig futó méretvonalakkal - lásd:
+    skp2draw.geometry.projection.find_touching_hardware /
+    panel_hardware_overlays.
     """
     scene = load_scene(skp_path)
     root = build_tree(scene)
@@ -67,7 +80,11 @@ def generate_all_panels(skp_path, output_dir, badge_keys=None) -> list[Path]:
         base = _safe_filename(node.definition_name)
         filename = _unique_filename(base, views[0].width, views[0].height, views[1].height, used_filenames)
         path = output_dir / filename
-        export_views(views, node.definition_name, path, count=count)
+
+        touching_hardware = find_touching_hardware(root, node)
+        hardware_by_view = panel_hardware_overlays(node, touching_hardware)
+
+        export_views(views, node.definition_name, path, count=count, hardware_by_view=hardware_by_view)
         written.append(path)
 
     return written
@@ -120,6 +137,81 @@ def generate_layout(skp_path, output_dir, badge_keys=None) -> Path:
     return path
 
 
+def generate_pdf_report(skp_path, output_dir, badge_keys=None) -> Path:
+    """
+    Egy összefűzött, A4-es ÁLLÓ tájolású PDF, ami MINDEN rajzot KÉPKÉNT
+    tartalmaz, a következő sorrendben:
+
+      1. Az áttekintő rajz HÁROM nézete (felülnézet, oldalnézet,
+         elölnézet), egy-egy KÜLÖN oldalon.
+      2. Minden bútorelem (összeállítás) a `collect_unique_assemblies`
+         sorrendjében:
+         a) a bútorelem szerkezeti rajza (mindhárom nézet EGY oldalon,
+            mint eddig is),
+         b) az EHHEZ a bútorelemhez tartozó egyedi (név+méret szerint,
+            de csak EZEN a bútorelemen belül deduplikált) alkatrészek,
+            egyenként egy-egy oldalon.
+
+    `badge_keys`: lásd skp2draw.badges.load_badge_keys.
+
+    Megjegyzés: egy olyan panel, ami NEM tartozik semmilyen
+    bútorelemhez (pl. egy önálló, csoportba nem rendezett lap közvetlenül
+    a modell gyökerén), nem kerül bele ebbe a PDF-be - lásd
+    skp2draw.hierarchy.collect_unique_assemblies docstringjét arról,
+    hogy mi számít "bútorelemnek".
+    """
+    scene = load_scene(skp_path)
+    root = build_tree(scene)
+
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    pdf_path = output_dir / "muszaki_dokumentacio.pdf"
+
+    with tempfile.TemporaryDirectory(prefix="skp2draw_pdf_") as tmp_dir:
+        tmp_dir = Path(tmp_dir)
+        image_paths: list[Path] = []
+        seq = 0
+
+        def _next_paths(base: str) -> tuple[Path, Path]:
+            nonlocal seq
+            seq += 1
+            stem = f"{seq:04d}_{_safe_filename(base)}"
+            return tmp_dir / f"{stem}.dxf", tmp_dir / f"{stem}.png"
+
+        # 1) Áttekintő - mindhárom nézet külön oldalon.
+        for view_label in ("felülnézet", "oldalnézet", "elölnézet"):
+            dxf_path, png_path = _next_paths(f"attekintes_{view_label}")
+            export_full_layout_view(root, view_label, dxf_path, badge_keys=badge_keys)
+            image_paths.append(render_dxf_to_png(dxf_path, png_path))
+
+        # 2) Bútorelemek + a hozzájuk tartozó alkatrészek.
+        for assembly_node, assembly_count in collect_unique_assemblies(root, badge_keys):
+            views_data = assembly_construction_views(assembly_node)
+            dxf_path, png_path = _next_paths(f"butorelem_{assembly_node.definition_name}")
+            export_construction_views(
+                assembly_node, assembly_node.definition_name, dxf_path,
+                count=assembly_count, views_data=views_data,
+            )
+            image_paths.append(render_dxf_to_png(dxf_path, png_path))
+
+            panels = collect_unique_panels(assembly_node, badge_keys)
+            for panel_node, panel_count in panels:
+                panel_views_ = panel_views(panel_node)
+                touching_hardware = find_touching_hardware(root, panel_node)
+                hardware_by_view = panel_hardware_overlays(panel_node, touching_hardware)
+
+                panel_dxf_path, panel_png_path = _next_paths(f"alkatresz_{panel_node.definition_name}")
+                export_views(
+                    panel_views_, panel_node.definition_name, panel_dxf_path,
+                    count=panel_count, hardware_by_view=hardware_by_view,
+                )
+                image_paths.append(render_dxf_to_png(panel_dxf_path, panel_png_path))
+
+        build_pdf_from_images(image_paths, pdf_path)
+
+    return pdf_path
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Műszaki rajzok generálása .skp fájlból (alkatrész + bútorelem + elrendezés)."
@@ -155,6 +247,10 @@ def main():
     print()
     layout = generate_layout(args.skp_file, args.output, badge_keys)
     print(f"Áttekintő elrendezés-rajz elkészült: {layout}")
+
+    print()
+    pdf_path = generate_pdf_report(args.skp_file, args.output, badge_keys)
+    print(f"Összefűzött PDF dokumentáció elkészült: {pdf_path}")
 
 
 if __name__ == "__main__":

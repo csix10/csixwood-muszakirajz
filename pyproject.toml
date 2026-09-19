@@ -11,6 +11,9 @@ dependencies = [
     "openskp",
     "numpy",
     "ezdxf",
+    "matplotlib",
+    "Pillow",
+    "reportlab",
 ]
 
 [tool.setuptools]

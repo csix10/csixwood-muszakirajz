@@ -31,6 +31,27 @@ def classify_kind(node: Node) -> str:
     return "hardware"
 
 
+def find_parent(root: Node, target: Node) -> Node | None:
+    """
+    Megkeresi `target` KÖZVETLEN szülőjét a fában (identitás szerint, `is`
+    - nem érték-egyezés). Erre azért van szükség, mert a Node-fa csak
+    lefelé (children) tárol referenciát, felfelé (szülő) nem - pedig egy
+    adott panel-példány "modulját" (a szekrény-csoportot, aminek a
+    gyereke/leszármazottja) csak így tudjuk visszakeresni, hogy aztán meg
+    tudjuk találni a VELE EGY MODULBAN lévő kötőelemeket (lásd:
+    skp2draw.geometry.projection.find_touching_hardware).
+
+    Visszaad None-t, ha `target` maga a `root`, vagy nem található.
+    """
+    for child in root.children:
+        if child is target:
+            return root
+        found = find_parent(child, target)
+        if found is not None:
+            return found
+    return None
+
+
 def collect_unique_panels(root: Node, badge_keys: set | None = None):
     """
     Bejárja a fát, és minden EGYEDI MÉRETŰ panel-változatból egy

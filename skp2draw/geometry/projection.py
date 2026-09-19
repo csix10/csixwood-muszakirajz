@@ -9,9 +9,12 @@ from dataclasses import dataclass
 import unicodedata
 import numpy as np
 from skp2draw.parser.model import Node
-from skp2draw.geometry.bbox import scaled_local_sizes, subtree_bbox_in_frame, subtree_points_in_frame
+from skp2draw.geometry.bbox import (
+    scaled_local_sizes, subtree_bbox_in_frame, subtree_points_in_frame,
+    local_bbox, subtree_world_bbox,
+)
 from skp2draw.geometry.hidden_line import Rect, convex_hull_2d, point_in_rect
-from skp2draw.hierarchy import classify_kind
+from skp2draw.hierarchy import classify_kind, find_parent
 
 
 @dataclass
@@ -38,6 +41,154 @@ def panel_views(node: Node):
         View(label="felülnézet", width=width, height=thickness),
         View(label="oldalnézet", width=height, height=thickness),
     ]
+
+
+def _collect_by_kind(node: Node, kind: str) -> list[Node]:
+    """Az összes adott KIND-ként ('panel' vagy 'hardware') osztályozott leszármazott, bármilyen mélyen beágyazva."""
+    result = []
+
+    def walk(n: Node):
+        if n.has_geometry and classify_kind(n) == kind:
+            result.append(n)
+        for c in n.children:
+            walk(c)
+
+    walk(node)
+    return result
+
+
+TOUCH_TOLERANCE_MM = 3.0
+
+
+def _bbox_touches(a_bbox, b_bbox, tolerance: float = TOUCH_TOLERANCE_MM) -> bool:
+    """
+    Igaz, ha két VILÁG-koordinátás AABB (mins, maxs) érintkezik vagy
+    átfedi egymást, `tolerance` mm-es tűréssel (hogy a csak egymáshoz
+    ÉRŐ, de matematikailag nem átfedő dobozok - pl. egy zsanér a lap
+    felületén - is "érintkezőnek" számítsanak).
+    """
+    a_mins, a_maxs = a_bbox
+    b_mins, b_maxs = b_bbox
+    return bool(np.all(a_maxs + tolerance >= b_mins) and np.all(b_maxs + tolerance >= a_mins))
+
+
+MAX_SHOWN_HARDWARE_SIZE_MM = 100.0
+
+
+def _is_small_enough(hw: Node, max_size_mm: float = MAX_SHOWN_HARDWARE_SIZE_MM) -> bool:
+    """
+    Igaz, ha a kötőelem MINDHÁROM (valódi, sablon-nyújtást is figyelembe
+    vevő) oldala kisebb, mint `max_size_mm` - az alkatrész-rajzon ugyanis
+    csak a KIS kötőelemeket (dűbel, zsanér-furat, polctartó stb.) érdemes
+    megjeleníteni, egy nagy vasalat (pl. egy teljes fiók-sín) csak
+    zsúfolttá tenné, és a pontos pozíciója sem ennyire kritikus.
+    """
+    sizes = scaled_local_sizes(hw)
+    if sizes is None:
+        return False
+    return bool((sizes < max_size_mm).all())
+
+
+def find_touching_hardware(
+    root: Node, panel_node: Node,
+    tolerance_mm: float = TOUCH_TOLERANCE_MM,
+    max_size_mm: float = MAX_SHOWN_HARDWARE_SIZE_MM,
+) -> list[Node]:
+    """
+    Megkeresi azokat a kötőelemeket (hardware), amik EGY MODULBAN vannak
+    `panel_node`-dal (a legközelebbi közös szülő-csoporton belül, lásd:
+    skp2draw.hierarchy.find_parent), ÉS a befoglaló dobozuk TÉNYLEGESEN
+    érinti/átfedi a panel befoglaló dobozát (lásd: _bbox_touches), ÉS
+    MINDHÁROM oldala kisebb, mint `max_size_mm` (lásd: _is_small_enough)
+    - a nagy vasalatokat NEM mutatjuk az alkatrész-rajzon.
+
+    Mindhárom feltétel kell: pusztán a modulon belüliség még nem elég (egy
+    szekrényben lehet több panel, és egy adott kötőelem csak az egyikhez
+    tartozik ténylegesen), pusztán a geometriai közelség pedig tévesen
+    bevonhatna egy másik, VÉLETLENÜL közel eső modul kötőelemeit is.
+    """
+    module = find_parent(root, panel_node)
+    if module is None:
+        module = root
+
+    panel_bbox = subtree_world_bbox(panel_node)
+    if panel_bbox is None:
+        return []
+
+    touching = []
+    for hw in _collect_by_kind(module, "hardware"):
+        if not _is_small_enough(hw, max_size_mm):
+            continue
+        hw_bbox = subtree_world_bbox(hw)
+        if hw_bbox is not None and _bbox_touches(panel_bbox, hw_bbox, tolerance_mm):
+            touching.append(hw)
+    return touching
+
+
+def panel_hardware_overlays(node: Node, hardware_nodes: list[Node]):
+    """
+    A `node` panelt érintő kötőelemek (lásd: find_touching_hardware)
+    vetített körvonala és középpontja a panel MINDHÁROM nézetén
+    (elölnézet: szélesség x magasság, felülnézet: szélesség x vastagság,
+    oldalnézet: magasság x vastagság - ugyanaz a tengely-választás, mint
+    panel_views-nál), a panel (0,0) sarkához igazítva nézetenként, VALÓDI
+    (a sablon-nyújtást is figyelembe vevő, lásd scaled_local_sizes) mm-ben.
+
+    A hardver-elem VILÁG-pontjait a panel SAJÁT (world_matrix szerinti)
+    keretében fejezzük ki (subtree_points_in_frame), ami a panel skálázás
+    ELŐTTI, "sablon" mértékegységeit adja - ezért utólag megszorozzuk a
+    panel saját tengelyeinek skálázó szorzójával (ugyanaz a col_scales,
+    amit scaled_local_sizes is használ), hogy a VALÓDI, nyújtás UTÁNI
+    méretekhez (amit panel_views ad vissza) illeszkedő koordinátákat
+    kapjunk.
+
+    Visszaad: {"elölnézet": [...], "felülnézet": [...], "oldalnézet": [...]},
+    mindegyik lista eleme {"points": [(u,v), ...], "center": (cu, cv),
+    "label": str, "visible": True}.
+    """
+    empty = {"elölnézet": [], "felülnézet": [], "oldalnézet": []}
+    if node.mesh is None or len(node.mesh.vertices_mm) == 0:
+        return empty
+
+    sizes = scaled_local_sizes(node)
+    if sizes is None:
+        return empty
+    t_axis = int(np.argmin(sizes))
+    plane_axes = [i for i in range(3) if i != t_axis]
+    u_axis, v_axis = plane_axes  # szélesség, magasság tengelye
+
+    mins, _ = local_bbox(node.mesh)
+    col_scales = np.linalg.norm(node.world_matrix[0:3, 0:3], axis=0)
+
+    view_axes = {
+        "elölnézet": (u_axis, v_axis),
+        "felülnézet": (u_axis, t_axis),
+        "oldalnézet": (v_axis, t_axis),
+    }
+
+    result = {label: [] for label in view_axes}
+    for hw in hardware_nodes:
+        pts_local = subtree_points_in_frame(hw, node.world_matrix)
+        if pts_local is None:
+            continue
+        for label, (au, av) in view_axes.items():
+            proj = [
+                (
+                    (float(p[au]) - mins[au]) * col_scales[au],
+                    (float(p[av]) - mins[av]) * col_scales[av],
+                )
+                for p in pts_local
+            ]
+            hull = convex_hull_2d(proj)
+            if len(hull) < 3:
+                continue
+            cu = sum(p[0] for p in hull) / len(hull)
+            cv = sum(p[1] for p in hull) / len(hull)
+            result[label].append({
+                "points": hull, "center": (cu, cv), "label": hw.name or hw.definition_name,
+                "visible": True,
+            })
+    return result
 
 
 def _normalize(text: str) -> str:
@@ -124,19 +275,6 @@ def assembly_views(node: Node, frame=None):
         View(label="felülnézet", width=sizes[width_axis], height=sizes[depth_axis]),
         View(label="oldalnézet", width=sizes[depth_axis], height=sizes[height_axis]),
     ]
-
-def _collect_by_kind(node: Node, kind: str) -> list[Node]:
-    """Az összes adott KIND-ként ('panel' vagy 'hardware') osztályozott leszármazott, bármilyen mélyen beágyazva."""
-    result = []
-
-    def walk(n: Node):
-        if n.has_geometry and classify_kind(n) == kind:
-            result.append(n)
-        for c in n.children:
-            walk(c)
-
-    walk(node)
-    return result
 
 def assembly_construction_views(node: Node, frame=None):
     """
@@ -248,6 +386,24 @@ def layout_view_specs(axes):
     }
 
 
+MIN_VISIBLE_PART_SIZE_MM = 100.0
+
+
+def _is_negligible_size(mins, maxs) -> bool:
+    """
+    Igaz, ha az alkatrész MINDHÁROM (valódi, 3D-s) oldala kisebb, mint
+    MIN_VISIBLE_PART_SIZE_MM - vagyis olyan apró elem (pl. egy kis
+    tömbösítő/kitöltő darab, dűbel), aminek a teljes konyha-áttekintőn
+    NINCS érdemi mérete egyik irányban sem, csak zsúfolttá tenné a
+    rajzot. (Egy VALÓDI panel ezt sosem üti meg, mert a classify_kind
+    már eleve megköveteli, hogy legalább két oldala >=100mm legyen -
+    ez a szűrés a hardver-elemekre (lábak, zsanérok, apró kötőelemek
+    stb.) vonatkozik ténylegesen.)
+    """
+    sizes = maxs - mins
+    return bool((sizes < MIN_VISIBLE_PART_SIZE_MM).all())
+
+
 def full_layout_views(modules, axes, frame=None):
     """
     A teljes bútorzat (TÖBB modul EGYÜTT) mindhárom nézete: minden modul
@@ -278,12 +434,16 @@ def full_layout_views(modules, axes, frame=None):
     for node, _ in modules:
         for panel in _collect_by_kind(node, "panel"):
             bbox = subtree_bbox_in_frame(panel, frame)
-            if bbox is not None:
+            if bbox is not None and not _is_negligible_size(bbox[0], bbox[1]):
                 panel_data.append((panel, bbox[0], bbox[1]))
         for hw in _collect_by_kind(node, "hardware"):
             pts = subtree_points_in_frame(hw, frame)
-            if pts is not None:
-                hardware_data.append((hw, pts))
+            if pts is None:
+                continue
+            hw_mins, hw_maxs = pts.min(axis=0), pts.max(axis=0)
+            if _is_negligible_size(hw_mins, hw_maxs):
+                continue
+            hardware_data.append((hw, pts))
 
     if not panel_data:
         return None
